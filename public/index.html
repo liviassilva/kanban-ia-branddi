@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Kanban IA — Branddi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:#0f0f11; --surface:#17171a; --surface2:#1e1e22;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --text:#f0eff4; --muted:#7b7a85;
+  --accent:#7c6af7; --accent2:#a78bfa;
+  --teal:#2dd4bf; --coral:#fb7185; --amber:#fbbf24; --green:#34d399;
+  --red-dl:#ff6b6b; --yellow-dl:#fbbf24;
+  --toggle-bg:#2a2a2f; --toggle-knob:#7c6af7;
+  --p-baixa:#34d399; --p-media:#60a5fa; --p-alta:#fbbf24; --p-urgente:#fb7185;
+}
+[data-theme="light"] {
+  --bg:#f4f3f8; --surface:#ffffff; --surface2:#f0eff5;
+  --border:rgba(0,0,0,0.07); --border2:rgba(0,0,0,0.13);
+  --text:#16141f; --muted:#8a8799;
+  --accent:#7c6af7; --accent2:#5b4de0;
+  --teal:#0e8a7a; --coral:#d63a55; --amber:#c07a10; --green:#0d9e75;
+  --red-dl:#d63a55; --yellow-dl:#b07010;
+  --toggle-bg:#e2e0ec; --toggle-knob:#7c6af7;
+  --p-baixa:#0d9e75; --p-media:#2563eb; --p-alta:#c07a10; --p-urgente:#d63a55;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .2s,color .2s;}
+
+/* header */
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:50;transition:background .2s,border-color .2s;}
+.logo{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:-.01em;}
+.logo-icon{width:28px;height:28px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.header-right{display:flex;align-items:center;gap:12px;}
+.team-avatars{display:flex;}
+.team-avatars .av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;border:2px solid var(--surface);margin-left:-6px;cursor:default;transition:transform .15s,border-color .2s;}
+.team-avatars .av:first-child{margin-left:0;}
+.team-avatars .av:hover{transform:translateY(-2px);z-index:5;}
+.av-k{background:#7c6af7;color:#fff;} .av-l{background:#2dd4bf;color:#0f1a19;} .av-me{background:#fb7185;color:#fff;}
+.theme-toggle{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;}
+.theme-toggle-track{width:38px;height:22px;border-radius:11px;background:var(--toggle-bg);position:relative;transition:background .2s;border:1px solid var(--border2);flex-shrink:0;}
+.theme-toggle-knob{position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--toggle-knob);transition:transform .2s;}
+[data-theme="light"] .theme-toggle-knob{transform:translateX(16px);}
+.theme-toggle-icon{font-size:14px;line-height:1;}
+.btn-new{display:flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s,transform .1s;}
+.btn-new:hover{background:var(--accent2);}
+.btn-new:active{transform:scale(.97);}
+
+/* board */
+.board-wrap{padding:24px 28px 40px;overflow-x:auto;}
+.board{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:16px;min-width:900px;}
+
+/* columns */
+.col{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;min-height:200px;display:flex;flex-direction:column;gap:10px;transition:background .2s,border-color .2s;}
+.col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;}
+.col-label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);}
+.dot{width:7px;height:7px;border-radius:50%;}
+.col-count{font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);color:var(--muted);padding:2px 8px;border-radius:20px;border:1px solid var(--border);transition:background .2s;}
+.col-add-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;line-height:1;padding:2px 4px;border-radius:5px;transition:color .1s,background .1s;}
+.col-add-btn:hover{color:var(--text);background:var(--surface2);}
+
+/* cards */
+.card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;cursor:grab;transition:border-color .15s,transform .15s,box-shadow .15s,background .2s;position:relative;}
+.card:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.15);}
+.card.dragging{opacity:.35;cursor:grabbing;}
+
+/* priority stripe */
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:10px 0 0 10px;background:transparent;transition:background .2s;}
+.card.prio-baixa::before{background:var(--p-baixa);}
+.card.prio-media::before{background:var(--p-media);}
+.card.prio-alta::before{background:var(--p-alta);}
+.card.prio-urgente::before{background:var(--p-urgente);}
+
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px;}
+.card-title{font-size:13px;font-weight:500;color:var(--text);line-height:1.45;flex:1;padding-right:4px;}
+.card-prio-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.prio-badge-baixa  {background:rgba(52,211,153,.13);color:var(--p-baixa);}
+.prio-badge-media  {background:rgba(96,165,250,.13);color:var(--p-media);}
+.prio-badge-alta   {background:rgba(251,191,36,.13);color:var(--p-alta);}
+.prio-badge-urgente{background:rgba(251,113,133,.15);color:var(--p-urgente);}
+
+.card-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:9px;white-space:pre-wrap;word-break:break-word;}
+.card-deadline{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-family:'DM Mono',monospace;border-radius:5px;padding:2px 7px;margin-bottom:9px;}
+.deadline-ok  {background:rgba(45,212,191,.12);color:var(--teal);}
+.deadline-soon{background:rgba(251,191,36,.15);color:var(--yellow-dl);}
+.deadline-late{background:rgba(255,107,107,.15);color:var(--red-dl);}
+.card-footer{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.card-footer-right{margin-left:auto;display:flex;align-items:center;gap:5px;}
+.tag{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;cursor:default;}
+.card-av{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;}
+.card-del{position:absolute;top:8px;right:9px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px;border-radius:4px;opacity:0;transition:opacity .1s,color .1s;}
+.card:hover .card-del{opacity:1;}
+.card-del:hover{color:var(--coral);}
+
+/* drop zone */
+.drop-zone{flex:1;min-height:48px;border-radius:8px;border:1.5px dashed transparent;transition:border-color .15s,background .15s;}
+.drop-zone.active{border-color:var(--accent);background:rgba(124,106,247,.06);}
+.empty{font-size:12px;color:var(--muted);text-align:center;padding:14px 0 6px;}
+
+/* modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:24px;width:420px;max-width:94vw;max-height:92vh;overflow-y:auto;animation:slideUp .2s ease;transition:background .2s;}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:18px;}
+.modal label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px;margin-top:14px;}
+.modal label:first-of-type{margin-top:0;}
+.modal input,.modal select,.modal textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:border-color .15s,background .2s,color .2s;}
+.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:var(--accent);}
+.modal select option{background:var(--surface2);color:var(--text);}
+.modal textarea{resize:vertical;min-height:72px;line-height:1.5;}
+.modal input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.5);cursor:pointer;}
+[data-theme="dark"] .modal input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.7);}
+.modal-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.modal-row>div{display:flex;flex-direction:column;}
+.modal-row label{margin-top:0;}
+.modal-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end;}
+.btn-cancel{background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:8px;padding:8px 16px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:color .1s;}
+.btn-cancel:hover{color:var(--text);}
+.btn-save{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s;}
+.btn-save:hover{background:var(--accent2);}
+
+/* tag manager */
+.tag-manager-modal{width:380px;}
+.tag-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;max-height:260px;overflow-y:auto;}
+.tag-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);}
+.tag-row-swatch{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.tag-row-name{flex:1;font-size:13px;}
+.tag-row-del{background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px;border-radius:4px;transition:color .1s;}
+.tag-row-del:hover{color:var(--coral);}
+.new-tag-row{display:grid;grid-template-columns:1fr 110px auto;gap:8px;align-items:end;}
+.new-tag-row label{margin-top:0;}
+.color-select-wrap{display:flex;flex-direction:column;}
+.btn-add-tag{height:37px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:0 14px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);cursor:pointer;transition:background .15s;white-space:nowrap;}
+.btn-add-tag:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-manage-tags{background:none;border:1px solid var(--border2);border-radius:8px;padding:7px 12px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--muted);cursor:pointer;transition:color .1s,border-color .1s;margin-top:6px;}
+.btn-manage-tags:hover{color:var(--text);border-color:var(--border2);}
+
+/* tag select pills in modal */
+.tag-picker{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0 4px;}
+.tag-pill{font-size:12px;padding:4px 11px;border-radius:20px;cursor:pointer;border:1.5px solid transparent;transition:opacity .12s,border-color .12s;opacity:.55;}
+.tag-pill.selected{opacity:1;border-color:rgba(255,255,255,.3);}
+[data-theme="light"] .tag-pill.selected{border-color:rgba(0,0,0,.25);}
+
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:300;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.loading{display:flex;align-items:center;justify-content:center;height:200px;color:var(--muted);font-size:13px;gap:8px;}
+.spinner{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    Projetos de IA
+  </div>
+  <div class="header-right">
+    <div class="team-avatars">
+      <div class="av av-k" title="Keila">K</div>
+      <div class="av av-l" title="Lívia">L</div>
+      <div class="av av-me" title="Maria Eduarda">ME</div>
+    </div>
+    <div class="theme-toggle" onclick="toggleTheme()" title="Alternar tema" role="button" aria-label="Alternar tema">
+      <span class="theme-toggle-icon" id="theme-icon">🌙</span>
+      <div class="theme-toggle-track"><div class="theme-toggle-knob"></div></div>
+    </div>
+    <button class="btn-new" onclick="openModal()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Novo card
+    </button>
+  </div>
+</header>
+
+<div class="board-wrap">
+  <div class="board" id="board">
+    <div class="loading"><div class="spinner"></div> Carregando...</div>
+  </div>
+</div>
+
+<!-- Card modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Novo card</h3>
+    <label>Título</label>
+    <input type="text" id="m-title" placeholder="Descreva a tarefa..."/>
+    <label>Descrição</label>
+    <textarea id="m-desc" placeholder="Detalhes, contexto, links..."></textarea>
+    <div class="modal-row">
+      <div>
+        <label>Coluna</label>
+        <select id="m-col">
+          <option value="backlog">Backlog</option>
+          <option value="andamento">Em andamento</option>
+          <option value="revisao">Em revisão</option>
+          <option value="concluido">Concluído</option>
+        </select>
+      </div>
+      <div>
+        <label>Prioridade</label>
+        <select id="m-priority">
+          <option value="baixa">🟢 Baixa</option>
+          <option value="media" selected>🔵 Média</option>
+          <option value="alta">🟡 Alta</option>
+          <option value="urgente">🔴 Urgente</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div>
+        <label>Responsável</label>
+        <select id="m-owner">
+          <option value="">— nenhuma —</option>
+          <option value="K">Keila</option>
+          <option value="L">Lívia</option>
+          <option value="ME">Maria Eduarda</option>
+        </select>
+      </div>
+      <div>
+        <label>Prazo</label>
+        <input type="date" id="m-deadline"/>
+      </div>
+    </div>
+    <label>Tags</label>
+    <div class="tag-picker" id="m-tag-picker"></div>
+    <button class="btn-manage-tags" onclick="openTagManager()">✦ Gerenciar tags</button>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="addCard()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tag manager modal -->
+<div class="modal-bg" id="tag-modal">
+  <div class="modal tag-manager-modal">
+    <h3>Gerenciar tags</h3>
+    <div class="tag-list" id="tag-list"></div>
+    <div class="new-tag-row">
+      <div>
+        <label>Nova tag</label>
+        <input type="text" id="new-tag-name" placeholder="Nome da tag..."/>
+      </div>
+      <div class="color-select-wrap">
+        <label>Cor</label>
+        <select id="new-tag-color">
+          <option value="purple">Roxo</option>
+          <option value="teal">Verde-água</option>
+          <option value="blue">Azul</option>
+          <option value="coral">Coral</option>
+          <option value="amber">Âmbar</option>
+          <option value="green">Verde</option>
+          <option value="pink">Rosa</option>
+        </select>
+      </div>
+      <button class="btn-add-tag" onclick="createTag()">Adicionar</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="closeTagManager()">Feito</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL='https://lcwxsikveyudtwiutjra.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxjd3hzaWt2ZXl1ZHR3aXV0anJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NDg0NTksImV4cCI6MjA5MzEyNDQ1OX0.rHfsDoZ6KZJKQtlsuZAHgWgho7S1frRslzYeAXTTrRA';
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+
+const COLS=[
+  {id:'backlog',label:'Backlog',dotColor:'#7b7a85'},
+  {id:'andamento',label:'Em andamento',dotColor:'#60a5fa'},
+  {id:'revisao',label:'Em revisão',dotColor:'#fbbf24'},
+  {id:'concluido',label:'Concluído',dotColor:'#34d399'},
+];
+const AV_CLASSES={K:'av-k',L:'av-l',ME:'av-me'};
+const OWNER_NAMES={K:'Keila',L:'Lívia',ME:'Maria Eduarda'};
+const PRIO_LABEL={baixa:'Baixa',media:'Média',alta:'Alta',urgente:'Urgente'};
+
+// tag color map → CSS var-like hex per theme
+const COLOR_DEFS={
+  purple:{bg:'rgba(124,106,247,.15)',text:'#a78bfa',swatch:'#7c6af7'},
+  teal:  {bg:'rgba(45,212,191,.13)', text:'#2dd4bf',swatch:'#2dd4bf'},
+  blue:  {bg:'rgba(96,165,250,.13)', text:'#60a5fa',swatch:'#60a5fa'},
+  coral: {bg:'rgba(251,113,133,.13)',text:'#fb7185',swatch:'#fb7185'},
+  amber: {bg:'rgba(251,191,36,.13)', text:'#fbbf24',swatch:'#fbbf24'},
+  green: {bg:'rgba(52,211,153,.13)', text:'#34d399',swatch:'#34d399'},
+  pink:  {bg:'rgba(232,121,249,.13)',text:'#e879f9',swatch:'#e879f9'},
+};
+
+let allCards=[];
+let allTags=[];
+let draggedId=null;
+let selectedTags=new Set();
+
+// ── theme ──
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  document.getElementById('theme-icon').textContent=t==='dark'?'🌙':'☀️';
+  localStorage.setItem('kanban-theme',t);
+}
+function toggleTheme(){
+  applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+}
+(()=>{
+  const s=localStorage.getItem('kanban-theme');
+  applyTheme(s||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
+})();
+
+// ── load ──
+async function loadAll(){
+  const [cardsRes,tagsRes]=await Promise.all([
+    sb.from('kanban_cards').select('*').order('position'),
+    sb.from('kanban_tags').select('*').order('name'),
+  ]);
+  if(cardsRes.error){showToast('Erro ao carregar cards');return;}
+  if(tagsRes.error){showToast('Erro ao carregar tags');return;}
+  allCards=cardsRes.data||[];
+  allTags=tagsRes.data||[];
+  renderBoard();
+}
+
+// ── board ──
+function deadlineInfo(d){
+  if(!d)return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  const dt=new Date(d+'T00:00:00');
+  const diff=Math.round((dt-today)/86400000);
+  const label=dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  if(diff<0) return{label:'⚠ '+label,cls:'deadline-late'};
+  if(diff<=3)return{label:'⏳ '+label,cls:'deadline-soon'};
+  return{label:'📅 '+label,cls:'deadline-ok'};
+}
+
+function tagById(id){return allTags.find(t=>t.id===id);}
+function tagStyle(color){const c=COLOR_DEFS[color]||COLOR_DEFS.purple;return`background:${c.bg};color:${c.text};`;}
+
+function renderBoard(){
+  const board=document.getElementById('board');
+  board.innerHTML='';
+  COLS.forEach(col=>{
+    const cards=allCards.filter(c=>c.col===col.id);
+    const colEl=document.createElement('div');
+    colEl.className='col';
+    colEl.innerHTML=`
+      <div class="col-header">
+        <span class="col-label">
+          <span class="dot" style="background:${col.dotColor}"></span>
+          ${col.label}
+          <span class="col-count">${cards.length}</span>
+        </span>
+        <button class="col-add-btn" onclick="openModal('${col.id}')" title="Adicionar card">+</button>
+      </div>`;
+    if(!cards.length){
+      const e=document.createElement('div');e.className='empty';e.textContent='Nenhum card';colEl.appendChild(e);
+    }
+    cards.forEach(c=>colEl.appendChild(makeCard(c)));
+    const dz=document.createElement('div');
+    dz.className='drop-zone';
+    dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('active');});
+    dz.addEventListener('dragleave',()=>dz.classList.remove('active'));
+    dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('active');moveCard(col.id);});
+    colEl.appendChild(dz);
+    board.appendChild(colEl);
+  });
+}
+
+function makeCard(card){
+  const el=document.createElement('div');
+  el.className=`card prio-${card.priority||'media'}`;
+  el.draggable=true;
+  el.dataset.id=card.id;
+
+  const prio=card.priority||'media';
+  const prioBadge=`<span class="card-prio-badge prio-badge-${prio}">${PRIO_LABEL[prio]}</span>`;
+  const descHtml=card.description?`<div class="card-desc">${esc(card.description)}</div>`:'';
+  const dl=deadlineInfo(card.deadline);
+  const dlHtml=dl?`<div class="card-deadline ${dl.cls}">${dl.label}</div>`:'';
+  const avHtml=card.owner?`<div class="card-av ${AV_CLASSES[card.owner]||'av-k'}" title="${OWNER_NAMES[card.owner]||card.owner}">${card.owner}</div>`:'';
+
+  // tags
+  let tagsHtml='';
+  if(card.tag){
+    // legacy single tag string
+    tagsHtml=`<span class="tag" style="background:rgba(124,106,247,.15);color:#a78bfa;">${esc(card.tag)}</span>`;
+  } else if(card.tags&&card.tags.length){
+    tagsHtml=card.tags.map(tid=>{
+      const t=tagById(tid);
+      if(!t)return'';
+      return`<span class="tag" style="${tagStyle(t.color)}">${esc(t.name)}</span>`;
+    }).join('');
+  }
+
+  el.innerHTML=`
+    <button class="card-del" onclick="deleteCard('${card.id}')" title="Remover">✕</button>
+    <div class="card-top">
+      <div class="card-title">${esc(card.title)}</div>
+      ${prioBadge}
+    </div>
+    ${descHtml}
+    ${dlHtml}
+    <div class="card-footer">
+      ${tagsHtml}
+      <div class="card-footer-right">${avHtml}</div>
+    </div>`;
+
+  el.addEventListener('dragstart',()=>{draggedId=card.id;el.classList.add('dragging');});
+  el.addEventListener('dragend',()=>{el.classList.remove('dragging');draggedId=null;});
+  return el;
+}
+
+async function moveCard(colId){
+  if(!draggedId)return;
+  const card=allCards.find(c=>c.id===draggedId);
+  if(!card||card.col===colId)return;
+  card.col=colId;
+  renderBoard();
+  await sb.from('kanban_cards').update({col:colId}).eq('id',draggedId);
+}
+
+async function deleteCard(id){
+  allCards=allCards.filter(c=>c.id!==id);
+  renderBoard();
+  await sb.from('kanban_cards').delete().eq('id',id);
+}
+
+// ── card modal ──
+function openModal(colId){
+  if(colId)document.getElementById('m-col').value=colId;
+  selectedTags=new Set();
+  renderTagPicker();
+  document.getElementById('modal').classList.add('open');
+  setTimeout(()=>document.getElementById('m-title').focus(),60);
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('open');
+  ['m-title','m-desc','m-deadline'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-priority').value='media';
+  selectedTags=new Set();
+}
+
+function renderTagPicker(){
+  const picker=document.getElementById('m-tag-picker');
+  if(!allTags.length){picker.innerHTML='<span style="font-size:12px;color:var(--muted)">Nenhuma tag criada ainda.</span>';return;}
+  picker.innerHTML=allTags.map(t=>{
+    const sel=selectedTags.has(t.id)?'selected':'';
+    return`<span class="tag-pill ${sel}" style="${tagStyle(t.color)}" onclick="toggleTagPill('${t.id}',this)">${esc(t.name)}</span>`;
+  }).join('');
+}
+
+function toggleTagPill(id,el){
+  if(selectedTags.has(id)){selectedTags.delete(id);el.classList.remove('selected');}
+  else{selectedTags.add(id);el.classList.add('selected');}
+}
+
+async function addCard(){
+  const title=document.getElementById('m-title').value.trim();
+  if(!title)return;
+  const col        =document.getElementById('m-col').value;
+  const priority   =document.getElementById('m-priority').value;
+  const owner      =document.getElementById('m-owner').value;
+  const deadline   =document.getElementById('m-deadline').value||null;
+  const description=document.getElementById('m-desc').value.trim();
+  const tags       =[...selectedTags];
+  const pos        =allCards.filter(c=>c.col===col).length;
+  const{data,error}=await sb.from('kanban_cards').insert({title,col,priority,owner,deadline,description,tags,position:pos}).select().single();
+  if(error){showToast('Erro ao criar card');return;}
+  allCards.push(data);
+  closeModal();renderBoard();showToast('Card criado ✓');
+}
+
+// ── tag manager ──
+function openTagManager(){
+  renderTagList();
+  document.getElementById('tag-modal').classList.add('open');
+}
+function closeTagManager(){
+  document.getElementById('tag-modal').classList.remove('open');
+  renderTagPicker();
+}
+
+function renderTagList(){
+  const list=document.getElementById('tag-list');
+  if(!allTags.length){list.innerHTML='<p style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0;">Nenhuma tag ainda.</p>';return;}
+  list.innerHTML=allTags.map(t=>`
+    <div class="tag-row">
+      <span class="tag-row-swatch" style="background:${COLOR_DEFS[t.color]?.swatch||'#7c6af7'}"></span>
+      <span class="tag-row-name">${esc(t.name)}</span>
+      <button class="tag-row-del" onclick="deleteTag('${t.id}')" title="Remover">✕</button>
+    </div>`).join('');
+}
+
+async function createTag(){
+  const name=document.getElementById('new-tag-name').value.trim();
+  const color=document.getElementById('new-tag-color').value;
+  if(!name)return;
+  const{data,error}=await sb.from('kanban_tags').insert({name,color}).select().single();
+  if(error){showToast('Erro ao criar tag (nome duplicado?)');return;}
+  allTags.push(data);
+  document.getElementById('new-tag-name').value='';
+  renderTagList();showToast('Tag criada ✓');
+}
+
+async function deleteTag(id){
+  allTags=allTags.filter(t=>t.id!==id);
+  renderTagList();
+  await sb.from('kanban_tags').delete().eq('id',id);
+}
+
+// ── utils ──
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+document.getElementById('tag-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTagManager();});
+document.getElementById('m-title').addEventListener('keydown',e=>{if(e.key==='Enter')addCard();});
+document.getElementById('new-tag-name').addEventListener('keydown',e=>{if(e.key==='Enter')createTag();});
+
+loadAll();
+sb.channel('kanban').on('postgres_changes',{event:'*',schema:'public',table:'kanban_cards'},loadAll).subscribe();
+sb.channel('kanban-tags').on('postgres_changes',{event:'*',schema:'public',table:'kanban_tags'},loadAll).subscribe();
+</script>
+</body>
+</html>
