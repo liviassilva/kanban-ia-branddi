@@ -147,6 +147,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .tag-pill.selected{opacity:1;border-color:rgba(255,255,255,.3);}
 [data-theme="light"] .tag-pill.selected{border-color:rgba(0,0,0,.25);}
 
+/* owner pills */
+.owner-pill{font-size:12px;padding:4px 11px;border-radius:20px;cursor:pointer;border:1.5px solid transparent;transition:opacity .12s,border-color .12s;opacity:.55;font-weight:600;}
+.owner-pill.selected{opacity:1;border-color:rgba(255,255,255,.3);}
+[data-theme="light"] .owner-pill.selected{border-color:rgba(0,0,0,.25);}
+
 /* toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:300;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -213,21 +218,10 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
         </select>
       </div>
     </div>
-    <div class="modal-row">
-      <div>
-        <label>Responsável</label>
-        <select id="m-owner">
-          <option value="">— nenhuma —</option>
-          <option value="K">Keila</option>
-          <option value="L">Lívia</option>
-          <option value="ME">Maria Eduarda</option>
-        </select>
-      </div>
-      <div>
-        <label>Prazo</label>
-        <input type="date" id="m-deadline"/>
-      </div>
-    </div>
+    <label>Responsáveis</label>
+    <div class="tag-picker" id="m-owner-picker"></div>
+    <label>Prazo</label>
+    <input type="date" id="m-deadline"/>
     <label>Tags</label>
     <div class="tag-picker" id="m-tag-picker"></div>
     <button class="btn-manage-tags" onclick="openTagManager()">✦ Gerenciar tags</button>
@@ -300,6 +294,7 @@ let allCards=[];
 let allTags=[];
 let draggedId=null;
 let selectedTags=new Set();
+let selectedOwners=new Set();
 
 // ── theme ──
 function applyTheme(t){
@@ -384,7 +379,8 @@ function makeCard(card){
   const descHtml=card.description?`<div class="card-desc">${esc(card.description)}</div>`:'';
   const dl=deadlineInfo(card.deadline);
   const dlHtml=dl?`<div class="card-deadline ${dl.cls}">${dl.label}</div>`:'';
-  const avHtml=card.owner?`<div class="card-av ${AV_CLASSES[card.owner]||'av-k'}" title="${OWNER_NAMES[card.owner]||card.owner}">${card.owner}</div>`:'';
+  const ownerList=card.owners&&card.owners.length?card.owners:(card.owner?[card.owner]:[]);
+  const avHtml=ownerList.map(o=>`<div class="card-av ${AV_CLASSES[o]||'av-k'}" title="${OWNER_NAMES[o]||o}" style="margin-left:-4px;">${o}</div>`).join('');
 
   // tags
   let tagsHtml='';
@@ -436,7 +432,9 @@ async function deleteCard(id){
 function openModal(colId){
   if(colId)document.getElementById('m-col').value=colId;
   selectedTags=new Set();
+  selectedOwners=new Set();
   renderTagPicker();
+  renderOwnerPicker();
   document.getElementById('modal').classList.add('open');
   setTimeout(()=>document.getElementById('m-title').focus(),60);
 }
@@ -445,6 +443,7 @@ function closeModal(){
   ['m-title','m-desc','m-deadline'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('m-priority').value='media';
   selectedTags=new Set();
+  selectedOwners=new Set();
 }
 
 function renderTagPicker(){
@@ -454,6 +453,23 @@ function renderTagPicker(){
     const sel=selectedTags.has(t.id)?'selected':'';
     return`<span class="tag-pill ${sel}" style="${tagStyle(t.color)}" onclick="toggleTagPill('${t.id}',this)">${esc(t.name)}</span>`;
   }).join('');
+}
+
+function renderOwnerPicker(){
+  const OWNERS=[{id:'K',label:'Keila'},{id:'L',label:'Lívia'},{id:'ME',label:'Maria Eduarda'}];
+  const picker=document.getElementById('m-owner-picker');
+  picker.innerHTML=OWNERS.map(o=>{
+    const sel=selectedOwners.has(o.id)?'selected':'';
+    const style=o.id==='K'?'background:rgba(37,99,235,.15);color:#60a5fa;':
+                 o.id==='L'?'background:rgba(45,212,191,.13);color:#2dd4bf;':
+                             'background:rgba(251,113,133,.13);color:#fb7185;';
+    return`<span class="owner-pill ${sel}" style="${style}" onclick="toggleOwnerPill('${o.id}',this)">${o.label}</span>`;
+  }).join('');
+}
+
+function toggleOwnerPill(id,el){
+  if(selectedOwners.has(id)){selectedOwners.delete(id);el.classList.remove('selected');}
+  else{selectedOwners.add(id);el.classList.add('selected');}
 }
 
 function toggleTagPill(id,el){
@@ -466,12 +482,12 @@ async function addCard(){
   if(!title)return;
   const col        =document.getElementById('m-col').value;
   const priority   =document.getElementById('m-priority').value;
-  const owner      =document.getElementById('m-owner').value;
+  const owners     =[...selectedOwners];
   const deadline   =document.getElementById('m-deadline').value||null;
   const description=document.getElementById('m-desc').value.trim();
   const tags       =[...selectedTags];
   const pos        =allCards.filter(c=>c.col===col).length;
-  const{data,error}=await sb.from('kanban_cards').insert({title,col,priority,owner,deadline,description,tags,position:pos}).select().single();
+  const{data,error}=await sb.from('kanban_cards').insert({title,col,priority,owners,deadline,description,tags,position:pos}).select().single();
   if(error){showToast('Erro ao criar card');return;}
   allCards.push(data);
   closeModal();renderBoard();showToast('Card criado ✓');
