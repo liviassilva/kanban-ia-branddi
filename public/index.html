@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Kanban IA — Branddi</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🎯</text></svg>"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -12,20 +13,20 @@
   --bg:#0f0f11; --surface:#17171a; --surface2:#1e1e22;
   --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
   --text:#f0eff4; --muted:#7b7a85;
-  --accent:#7c6af7; --accent2:#a78bfa;
+  --accent:#2563eb; --accent2:#60a5fa;
   --teal:#2dd4bf; --coral:#fb7185; --amber:#fbbf24; --green:#34d399;
   --red-dl:#ff6b6b; --yellow-dl:#fbbf24;
-  --toggle-bg:#2a2a2f; --toggle-knob:#7c6af7;
+  --toggle-bg:#2a2a2f; --toggle-knob:#2563eb;
   --p-baixa:#34d399; --p-media:#60a5fa; --p-alta:#fbbf24; --p-urgente:#fb7185;
 }
 [data-theme="light"] {
   --bg:#f4f3f8; --surface:#ffffff; --surface2:#f0eff5;
   --border:rgba(0,0,0,0.07); --border2:rgba(0,0,0,0.13);
   --text:#16141f; --muted:#8a8799;
-  --accent:#7c6af7; --accent2:#5b4de0;
+  --accent:#2563eb; --accent2:#1d4ed8;
   --teal:#0e8a7a; --coral:#d63a55; --amber:#c07a10; --green:#0d9e75;
   --red-dl:#d63a55; --yellow-dl:#b07010;
-  --toggle-bg:#e2e0ec; --toggle-knob:#7c6af7;
+  --toggle-bg:#e2e0ec; --toggle-knob:#2563eb;
   --p-baixa:#0d9e75; --p-media:#2563eb; --p-alta:#c07a10; --p-urgente:#d63a55;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -40,7 +41,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .team-avatars .av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;border:2px solid var(--surface);margin-left:-6px;cursor:default;transition:transform .15s,border-color .2s;}
 .team-avatars .av:first-child{margin-left:0;}
 .team-avatars .av:hover{transform:translateY(-2px);z-index:5;}
-.av-k{background:#7c6af7;color:#fff;} .av-l{background:#2dd4bf;color:#0f1a19;} .av-me{background:#fb7185;color:#fff;}
+.av-k{background:#2563eb;color:#fff;} .av-l{background:#2dd4bf;color:#0f1a19;} .av-me{background:#fb7185;color:#fff;}
 .theme-toggle{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;}
 .theme-toggle-track{width:38px;height:22px;border-radius:11px;background:var(--toggle-bg);position:relative;transition:background .2s;border:1px solid var(--border2);flex-shrink:0;}
 .theme-toggle-knob{position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--toggle-knob);transition:transform .2s;}
@@ -98,7 +99,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 
 /* drop zone */
 .drop-zone{flex:1;min-height:48px;border-radius:8px;border:1.5px dashed transparent;transition:border-color .15s,background .15s;}
-.drop-zone.active{border-color:var(--accent);background:rgba(124,106,247,.06);}
+.drop-zone.active{border-color:var(--accent);background:rgba(37,99,235,.06);}
 .empty{font-size:12px;color:var(--muted);text-align:center;padding:14px 0 6px;}
 
 /* modal */
@@ -286,7 +287,7 @@ const PRIO_LABEL={baixa:'Baixa',media:'Média',alta:'Alta',urgente:'Urgente'};
 
 // tag color map → CSS var-like hex per theme
 const COLOR_DEFS={
-  purple:{bg:'rgba(124,106,247,.15)',text:'#a78bfa',swatch:'#7c6af7'},
+  purple:{bg:'rgba(37,99,235,.15)',text:'#60a5fa',swatch:'#2563eb'},
   teal:  {bg:'rgba(45,212,191,.13)', text:'#2dd4bf',swatch:'#2dd4bf'},
   blue:  {bg:'rgba(96,165,250,.13)', text:'#60a5fa',swatch:'#60a5fa'},
   coral: {bg:'rgba(251,113,133,.13)',text:'#fb7185',swatch:'#fb7185'},
@@ -389,7 +390,7 @@ function makeCard(card){
   let tagsHtml='';
   if(card.tag){
     // legacy single tag string
-    tagsHtml=`<span class="tag" style="background:rgba(124,106,247,.15);color:#a78bfa;">${esc(card.tag)}</span>`;
+    tagsHtml=`<span class="tag" style="background:rgba(37,99,235,.15);color:#60a5fa;">${esc(card.tag)}</span>`;
   } else if(card.tags&&card.tags.length){
     tagsHtml=card.tags.map(tid=>{
       const t=tagById(tid);
@@ -491,7 +492,7 @@ function renderTagList(){
   if(!allTags.length){list.innerHTML='<p style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0;">Nenhuma tag ainda.</p>';return;}
   list.innerHTML=allTags.map(t=>`
     <div class="tag-row">
-      <span class="tag-row-swatch" style="background:${COLOR_DEFS[t.color]?.swatch||'#7c6af7'}"></span>
+      <span class="tag-row-swatch" style="background:${COLOR_DEFS[t.color]?.swatch||'#2563eb'}"></span>
       <span class="tag-row-name">${esc(t.name)}</span>
       <button class="tag-row-del" onclick="deleteTag('${t.id}')" title="Remover">✕</button>
     </div>`).join('');
