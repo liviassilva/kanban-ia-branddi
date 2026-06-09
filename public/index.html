@@ -152,6 +152,39 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .owner-pill.selected{opacity:1;border-color:rgba(255,255,255,.3);}
 [data-theme="light"] .owner-pill.selected{border-color:rgba(0,0,0,.25);}
 
+
+/* ── nav tabs ── */
+.nav-tabs{display:flex;gap:2px;padding:0 28px;background:var(--surface);border-bottom:1px solid var(--border);transition:background .2s;}
+.nav-tab{padding:12px 18px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;user-select:none;}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── pages ── */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── calendar ── */
+.cal-wrap{padding:28px;}
+.cal-section{margin-bottom:40px;}
+.cal-section-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.cal-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
+.cal-name{font-size:15px;font-weight:600;}
+.cal-grid-wrap{overflow-x:auto;}
+.cal-grid{display:grid;grid-template-columns:52px repeat(5,1fr);border:1px solid var(--border);border-radius:12px;overflow:hidden;min-width:560px;}
+.cal-head{background:var(--surface2);border-bottom:1px solid var(--border);display:contents;}
+.cal-head-cell{padding:10px 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:center;border-right:1px solid var(--border);}
+.cal-head-cell:last-child{border-right:none;}
+.cal-hour-label{padding:0 8px;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);display:flex;align-items:flex-start;padding-top:8px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2);}
+.cal-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:52px;position:relative;transition:background .1s;}
+.cal-cell:last-child{border-right:none;}
+.cal-cell:hover{background:rgba(37,99,235,.04);}
+.cal-grid>*:nth-last-child(-n+6){border-bottom:none;}
+.cal-input{width:100%;height:100%;min-height:52px;background:transparent;border:none;outline:none;resize:none;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);padding:8px;line-height:1.4;cursor:text;}
+.cal-input::placeholder{color:var(--border2);}
+.cal-input:focus{background:rgba(37,99,235,.06);}
+.cal-cell.has-content{background:rgba(37,99,235,.07);}
+.cal-cell.has-content:hover{background:rgba(37,99,235,.12);}
+
 /* toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:300;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -184,10 +217,24 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
   </div>
 </header>
 
+<nav class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('kanban',this)">📋 Kanban</div>
+  <div class="nav-tab" onclick="switchTab('agenda',this)">📅 Agenda</div>
+</nav>
+
+<div id="page-kanban" class="page active">
 <div class="board-wrap">
   <div class="board" id="board">
     <div class="loading"><div class="spinner"></div> Carregando...</div>
   </div>
+</div>
+</div><!-- /page-kanban -->
+
+<!-- Agenda page -->
+<div id="page-agenda" class="page">
+<div class="cal-wrap" id="cal-wrap">
+  <div class="loading"><div class="spinner"></div> Carregando agenda...</div>
+</div>
 </div>
 
 <!-- Card modal -->
@@ -545,6 +592,114 @@ document.getElementById('m-title').addEventListener('keydown',e=>{if(e.key==='En
 document.getElementById('new-tag-name').addEventListener('keydown',e=>{if(e.key==='Enter')createTag();});
 
 loadAll();
+
+// ── tab switching ──
+function switchTab(tab, el){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('page-'+tab).classList.add('active');
+  if(tab==='kanban'){
+    document.querySelector('.btn-new').style.display='flex';
+  } else {
+    document.querySelector('.btn-new').style.display='none';
+    renderCalendar();
+  }
+}
+
+// ── calendar ──
+const CAL_DAYS=[{id:'seg',label:'Segunda'},{id:'ter',label:'Terça'},{id:'qua',label:'Quarta'},{id:'qui',label:'Quinta'},{id:'sex',label:'Sexta'}];
+const CAL_HOURS=Array.from({length:10},(_,i)=>i+8); // 8..17
+const CAL_OWNERS=[
+  {id:'K', name:'Keila',        cls:'av-k'},
+  {id:'L', name:'Lívia',        cls:'av-l'},
+  {id:'ME',name:'Maria Eduarda',cls:'av-me'},
+];
+
+let calEvents={}; // key: owner_day_hour → {id, text}
+let calSaveTimers={};
+
+async function loadCalendar(){
+  const{data,error}=await sb.from('calendar_events').select('*');
+  if(error){showToast('Erro ao carregar agenda');return;}
+  calEvents={};
+  (data||[]).forEach(e=>{
+    calEvents[`${e.owner}_${e.day}_${e.hour}`]=e;
+  });
+}
+
+async function renderCalendar(){
+  if(!Object.keys(calEvents).length && document.getElementById('cal-wrap').querySelector('.loading')){
+    await loadCalendar();
+  }
+  const wrap=document.getElementById('cal-wrap');
+  wrap.innerHTML='';
+  CAL_OWNERS.forEach(owner=>{
+    const section=document.createElement('div');
+    section.className='cal-section';
+    section.innerHTML=`
+      <div class="cal-section-header">
+        <div class="cal-av ${owner.cls}">${owner.id}</div>
+        <span class="cal-name">${owner.name}</span>
+      </div>
+      <div class="cal-grid-wrap">
+        <div class="cal-grid" id="grid-${owner.id}">
+          <div class="cal-head-cell" style="background:var(--surface2);border-bottom:1px solid var(--border)"></div>
+          ${CAL_DAYS.map(d=>`<div class="cal-head-cell" style="background:var(--surface2);border-bottom:1px solid var(--border);border-right:1px solid var(--border)">${d.label}</div>`).join('')}
+          ${CAL_HOURS.map(h=>`
+            <div class="cal-hour-label">${h}h</div>
+            ${CAL_DAYS.map(d=>{
+              const key=`${owner.id}_${d.id}_${h}`;
+              const ev=calEvents[key];
+              const txt=ev?ev.text:'';
+              const hasCls=txt?'has-content':'';
+              return`<div class="cal-cell ${hasCls}" data-owner="${owner.id}" data-day="${d.id}" data-hour="${h}">
+                <textarea class="cal-input" placeholder="+" data-key="${key}">${esc(txt)}</textarea>
+              </div>`;
+            }).join('')}
+          `).join('')}
+        </div>
+      </div>`;
+    wrap.appendChild(section);
+  });
+
+  // attach save listeners
+  wrap.querySelectorAll('.cal-input').forEach(ta=>{
+    ta.addEventListener('input', ()=>{
+      const key=ta.dataset.key;
+      const cell=ta.closest('.cal-cell');
+      if(ta.value.trim()) cell.classList.add('has-content');
+      else cell.classList.remove('has-content');
+      clearTimeout(calSaveTimers[key]);
+      calSaveTimers[key]=setTimeout(()=>saveCalCell(ta),800);
+    });
+  });
+}
+
+async function saveCalCell(ta){
+  const[owner,day,hour]=ta.dataset.key.split('_');
+  const text=ta.value.trim();
+  const existing=calEvents[ta.dataset.key];
+
+  if(!text){
+    if(existing){
+      delete calEvents[ta.dataset.key];
+      await sb.from('calendar_events').delete().eq('id',existing.id);
+    }
+    return;
+  }
+  if(existing){
+    calEvents[ta.dataset.key]={...existing,text};
+    await sb.from('calendar_events').update({text,updated_at:new Date().toISOString()}).eq('id',existing.id);
+  } else {
+    const{data,error}=await sb.from('calendar_events').insert({owner,day,hour:parseInt(hour),text}).select().single();
+    if(!error) calEvents[ta.dataset.key]=data;
+  }
+}
+
+// preload calendar data on page load
+loadCalendar();
+
 sb.channel('kanban').on('postgres_changes',{event:'*',schema:'public',table:'kanban_cards'},loadAll).subscribe();
 sb.channel('kanban-tags').on('postgres_changes',{event:'*',schema:'public',table:'kanban_tags'},loadAll).subscribe();
 </script>
