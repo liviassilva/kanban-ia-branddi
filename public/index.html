@@ -164,22 +164,24 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .page.active{display:block;}
 
 /* ── calendar ── */
-.cal-wrap{padding:28px;}
-.cal-section{margin-bottom:40px;}
-.cal-section-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
-.cal-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
-.cal-name{font-size:15px;font-weight:600;}
-.cal-grid-wrap{overflow-x:auto;}
-.cal-grid{display:grid;grid-template-columns:52px repeat(5,1fr);border:1px solid var(--border);border-radius:12px;overflow:hidden;min-width:560px;}
-.cal-head{background:var(--surface2);border-bottom:1px solid var(--border);display:contents;}
-.cal-head-cell{padding:10px 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:center;border-right:1px solid var(--border);}
+.cal-wrap{padding:20px 28px 40px;display:flex;flex-direction:column;height:calc(100vh - 108px);overflow:hidden;}
+.cal-columns{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;flex:1;overflow:hidden;min-width:0;}
+.cal-section{display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.cal-section-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-shrink:0;}
+.cal-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.cal-name{font-size:14px;font-weight:600;}
+.cal-grid-wrap{flex:1;overflow-y:auto;overflow-x:hidden;border:1px solid var(--border);border-radius:12px;}
+.cal-grid-wrap::-webkit-scrollbar{width:4px;}
+.cal-grid-wrap::-webkit-scrollbar-track{background:transparent;}
+.cal-grid-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+.cal-grid{display:grid;grid-template-columns:40px repeat(5,1fr);}
+.cal-head-cell{padding:8px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2);position:sticky;top:0;z-index:2;}
 .cal-head-cell:last-child{border-right:none;}
-.cal-hour-label{padding:0 8px;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);display:flex;align-items:flex-start;padding-top:8px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2);}
-.cal-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:52px;position:relative;transition:background .1s;}
+.cal-hour-label{padding:0 4px;font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);display:flex;align-items:flex-start;padding-top:6px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2);position:sticky;left:0;z-index:1;}
+.cal-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:44px;position:relative;transition:background .1s;}
 .cal-cell:last-child{border-right:none;}
 .cal-cell:hover{background:rgba(37,99,235,.04);}
-.cal-grid>*:nth-last-child(-n+6){border-bottom:none;}
-.cal-input{width:100%;height:100%;min-height:52px;background:transparent;border:none;outline:none;resize:none;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);padding:8px;line-height:1.4;cursor:text;}
+.cal-input{width:100%;height:100%;min-height:44px;background:transparent;border:none;outline:none;resize:none;font-size:11px;font-family:'DM Sans',sans-serif;color:var(--text);padding:5px 6px;line-height:1.4;cursor:text;}
 .cal-input::placeholder{color:var(--border2);}
 .cal-input:focus{background:rgba(37,99,235,.06);}
 .cal-cell.has-content{background:rgba(37,99,235,.07);}
@@ -633,7 +635,8 @@ async function renderCalendar(){
     await loadCalendar();
   }
   const wrap=document.getElementById('cal-wrap');
-  wrap.innerHTML='';
+  wrap.innerHTML='<div class="cal-columns" id="cal-columns"></div>';
+  const cols=document.getElementById('cal-columns');
   CAL_OWNERS.forEach(owner=>{
     const section=document.createElement('div');
     section.className='cal-section';
@@ -644,8 +647,8 @@ async function renderCalendar(){
       </div>
       <div class="cal-grid-wrap">
         <div class="cal-grid" id="grid-${owner.id}">
-          <div class="cal-head-cell" style="background:var(--surface2);border-bottom:1px solid var(--border)"></div>
-          ${CAL_DAYS.map(d=>`<div class="cal-head-cell" style="background:var(--surface2);border-bottom:1px solid var(--border);border-right:1px solid var(--border)">${d.label}</div>`).join('')}
+          <div class="cal-head-cell"></div>
+          ${CAL_DAYS.map(d=>`<div class="cal-head-cell">${d.label.slice(0,3)}</div>`).join('')}
           ${CAL_HOURS.map(h=>`
             <div class="cal-hour-label">${h}h</div>
             ${CAL_DAYS.map(d=>{
@@ -654,13 +657,13 @@ async function renderCalendar(){
               const txt=ev?ev.text:'';
               const hasCls=txt?'has-content':'';
               return`<div class="cal-cell ${hasCls}" data-owner="${owner.id}" data-day="${d.id}" data-hour="${h}">
-                <textarea class="cal-input" placeholder="+" data-key="${key}">${esc(txt)}</textarea>
+                <textarea class="cal-input" placeholder="…" data-key="${key}">${esc(txt)}</textarea>
               </div>`;
             }).join('')}
           `).join('')}
         </div>
       </div>`;
-    wrap.appendChild(section);
+    cols.appendChild(section);
   });
 
   // attach save listeners
