@@ -187,6 +187,57 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .cal-cell.has-content{background:rgba(37,99,235,.07);}
 .cal-cell.has-content:hover{background:rgba(37,99,235,.12);}
 
+
+/* ── coleta de dados ── */
+.coleta-wrap{padding:28px;max-width:1200px;}
+.coleta-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.coleta-header h2{font-size:18px;font-weight:600;}
+.btn-coleta-new{display:flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s;}
+.btn-coleta-new:hover{background:var(--accent2);}
+.coleta-list{display:flex;flex-direction:column;gap:14px;}
+.coleta-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .15s;}
+.coleta-card:hover{border-color:var(--border2);}
+.coleta-card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;gap:12px;}
+.coleta-card-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0;}
+.coleta-project-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:rgba(37,99,235,.13);color:var(--accent);white-space:nowrap;flex-shrink:0;}
+.coleta-source-type{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--surface2);color:var(--muted);white-space:nowrap;flex-shrink:0;}
+.coleta-title{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.coleta-subtitle{font-size:12px;color:var(--muted);margin-top:2px;}
+.coleta-meta{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.coleta-date{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);}
+.coleta-chevron{color:var(--muted);font-size:16px;transition:transform .2s;flex-shrink:0;}
+.coleta-card.open .coleta-chevron{transform:rotate(90deg);}
+.coleta-card-body{display:none;padding:0 20px 20px;border-top:1px solid var(--border);}
+.coleta-card.open .coleta-card-body{display:block;}
+.coleta-section{margin-top:18px;}
+.coleta-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;}
+.coleta-summary{font-size:13px;color:var(--text);line-height:1.65;background:var(--surface2);border-radius:8px;padding:12px 14px;}
+.coleta-points{display:flex;flex-direction:column;gap:8px;}
+.coleta-point{background:var(--surface2);border-radius:8px;padding:10px 14px;border-left:3px solid var(--accent);}
+.coleta-point-cat{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.coleta-point-detail{font-size:12px;color:var(--muted);line-height:1.55;}
+.coleta-steps{display:flex;flex-direction:column;gap:6px;}
+.coleta-step{display:flex;align-items:flex-start;gap:10px;background:var(--surface2);border-radius:8px;padding:9px 14px;}
+.coleta-step-owner{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:rgba(37,99,235,.13);color:var(--accent);white-space:nowrap;flex-shrink:0;margin-top:1px;}
+.coleta-step-action{font-size:12px;color:var(--text);line-height:1.5;}
+.coleta-card-del{background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:4px;border-radius:4px;transition:color .1s;}
+.coleta-card-del:hover{color:var(--coral);}
+
+/* coleta modal */
+.coleta-modal{width:520px;}
+.coleta-modal .modal-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.coleta-modal .modal-row-3>div{display:flex;flex-direction:column;}
+.coleta-modal .modal-row-3 label{margin-top:0;}
+.points-editor,.steps-editor{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.point-row,.step-row{display:grid;gap:6px;align-items:start;}
+.point-row{grid-template-columns:1fr 2fr auto;}
+.step-row{grid-template-columns:120px 1fr auto;}
+.point-row input,.step-row input,.point-row textarea,.step-row textarea{font-size:12px;padding:7px 10px;}
+.btn-add-row{background:none;border:1px dashed var(--border2);border-radius:8px;padding:6px;font-size:12px;color:var(--muted);cursor:pointer;transition:color .1s,border-color .1s;width:100%;margin-top:2px;}
+.btn-add-row:hover{color:var(--text);border-color:var(--border2);}
+.btn-del-row{background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:4px;border-radius:4px;transition:color .1s;align-self:center;}
+.btn-del-row:hover{color:var(--coral);}
+
 /* toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:300;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -222,6 +273,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 <nav class="nav-tabs">
   <div class="nav-tab active" onclick="switchTab('kanban',this)">📋 Kanban</div>
   <div class="nav-tab" onclick="switchTab('agenda',this)">📅 Agenda</div>
+  <div class="nav-tab" onclick="switchTab('coleta',this)">🔍 Coleta de Dados</div>
 </nav>
 
 <div id="page-kanban" class="page active">
@@ -237,6 +289,22 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 <div class="cal-wrap" id="cal-wrap">
   <div class="loading"><div class="spinner"></div> Carregando agenda...</div>
 </div>
+</div>
+
+<!-- Coleta de Dados page -->
+<div id="page-coleta" class="page">
+  <div class="coleta-wrap">
+    <div class="coleta-header">
+      <h2>Coleta de Dados</h2>
+      <button class="btn-coleta-new" onclick="openColetaModal()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Nova coleta
+      </button>
+    </div>
+    <div class="coleta-list" id="coleta-list">
+      <div class="loading"><div class="spinner"></div> Carregando...</div>
+    </div>
+  </div>
 </div>
 
 <!-- Card modal -->
@@ -307,6 +375,58 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
     </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="closeTagManager()">Feito</button>
+    </div>
+  </div>
+</div>
+
+<!-- Coleta modal -->
+<div class="modal-bg" id="coleta-modal">
+  <div class="modal coleta-modal">
+    <h3>Nova coleta de dados</h3>
+    <label>Projeto</label>
+    <input type="text" id="cm-project" placeholder="Ex: Sistema Integrado"/>
+    <div class="modal-row-3">
+      <div><label>Tipo de fonte</label>
+        <select id="cm-type">
+          <option>Entrevista</option>
+          <option>Pesquisa</option>
+          <option>Observação</option>
+          <option>Documento</option>
+          <option>Workshop</option>
+        </select>
+      </div>
+      <div><label>Nome da fonte</label>
+        <input type="text" id="cm-name" placeholder="Ex: Alícia Bortolote"/>
+      </div>
+      <div><label>Cargo / Papel</label>
+        <input type="text" id="cm-role" placeholder="Ex: CS Lead"/>
+      </div>
+    </div>
+    <label>Data</label>
+    <input type="date" id="cm-date"/>
+    <label>Resumo</label>
+    <textarea id="cm-summary" placeholder="Contexto geral da coleta..." style="min-height:80px"></textarea>
+    <label>Pontos-chave</label>
+    <div class="points-editor" id="cm-points">
+      <div class="point-row">
+        <input type="text" placeholder="Categoria"/>
+        <input type="text" placeholder="Detalhe"/>
+        <button class="btn-del-row" onclick="delRow(this)">✕</button>
+      </div>
+    </div>
+    <button class="btn-add-row" onclick="addPointRow()">+ Adicionar ponto</button>
+    <label style="margin-top:16px">Próximos passos</label>
+    <div class="steps-editor" id="cm-steps">
+      <div class="step-row">
+        <input type="text" placeholder="Responsável"/>
+        <input type="text" placeholder="Ação"/>
+        <button class="btn-del-row" onclick="delRow(this)">✕</button>
+      </div>
+    </div>
+    <button class="btn-add-row" onclick="addStepRow()">+ Adicionar passo</button>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeColetaModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveColeta()">Salvar</button>
     </div>
   </div>
 </div>
@@ -590,10 +710,136 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 document.getElementById('tag-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTagManager();});
+document.getElementById('coleta-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeColetaModal();});
 document.getElementById('m-title').addEventListener('keydown',e=>{if(e.key==='Enter')addCard();});
 document.getElementById('new-tag-name').addEventListener('keydown',e=>{if(e.key==='Enter')createTag();});
 
 loadAll();
+
+
+// ── coleta de dados ──
+let coletaData = [];
+let coletaLoaded = false;
+
+async function loadColeta() {
+  const { data, error } = await sb.from('data_collections').select('*').order('date', { ascending: false });
+  if (error) { showToast('Erro ao carregar coletas'); return; }
+  coletaData = data || [];
+  renderColeta();
+  coletaLoaded = true;
+}
+
+function renderColeta() {
+  const list = document.getElementById('coleta-list');
+  if (!coletaData.length) {
+    list.innerHTML = '<div class="empty" style="padding:40px 0;font-size:13px;">Nenhuma coleta registrada ainda.</div>';
+    return;
+  }
+  list.innerHTML = coletaData.map(c => {
+    const pts = (c.key_points || []).map(p => `
+      <div class="coleta-point">
+        <div class="coleta-point-cat">${esc(p.category)}</div>
+        <div class="coleta-point-detail">${esc(p.detail)}</div>
+      </div>`).join('');
+    const steps = (c.next_steps || []).map(s => `
+      <div class="coleta-step">
+        <span class="coleta-step-owner">${esc(s.owner)}</span>
+        <span class="coleta-step-action">${esc(s.action)}</span>
+      </div>`).join('');
+    const dateStr = c.date ? new Date(c.date + 'T00:00:00').toLocaleDateString('pt-BR') : '';
+    return `
+    <div class="coleta-card" id="cc-${c.id}">
+      <div class="coleta-card-header" onclick="toggleColeta('${c.id}')">
+        <div class="coleta-card-left">
+          <span class="coleta-project-badge">${esc(c.project)}</span>
+          <span class="coleta-source-type">${esc(c.source_type)}</span>
+          <div>
+            <div class="coleta-title">${esc(c.source_name)}</div>
+            <div class="coleta-subtitle">${esc(c.source_role)}</div>
+          </div>
+        </div>
+        <div class="coleta-meta">
+          <span class="coleta-date">${dateStr}</span>
+          <button class="coleta-card-del" onclick="event.stopPropagation();deleteColeta('${c.id}')" title="Remover">✕</button>
+          <span class="coleta-chevron">▶</span>
+        </div>
+      </div>
+      <div class="coleta-card-body">
+        <div class="coleta-section">
+          <div class="coleta-section-title">Resumo</div>
+          <div class="coleta-summary">${esc(c.summary)}</div>
+        </div>
+        ${pts ? `<div class="coleta-section"><div class="coleta-section-title">Pontos-chave</div><div class="coleta-points">${pts}</div></div>` : ''}
+        ${steps ? `<div class="coleta-section"><div class="coleta-section-title">Próximos passos</div><div class="coleta-steps">${steps}</div></div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleColeta(id) {
+  document.getElementById('cc-' + id).classList.toggle('open');
+}
+
+async function deleteColeta(id) {
+  coletaData = coletaData.filter(c => c.id !== id);
+  renderColeta();
+  await sb.from('data_collections').delete().eq('id', id);
+}
+
+function openColetaModal() {
+  document.getElementById('cm-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('coleta-modal').classList.add('open');
+  setTimeout(() => document.getElementById('cm-project').focus(), 60);
+}
+function closeColetaModal() {
+  document.getElementById('coleta-modal').classList.remove('open');
+  ['cm-project','cm-name','cm-role','cm-summary'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cm-points').innerHTML = '<div class="point-row"><input type="text" placeholder="Categoria"/><input type="text" placeholder="Detalhe"/><button class="btn-del-row" onclick="delRow(this)">✕</button></div>';
+  document.getElementById('cm-steps').innerHTML = '<div class="step-row"><input type="text" placeholder="Responsável"/><input type="text" placeholder="Ação"/><button class="btn-del-row" onclick="delRow(this)">✕</button></div>';
+}
+
+function addPointRow() {
+  const div = document.createElement('div');
+  div.className = 'point-row';
+  div.innerHTML = '<input type="text" placeholder="Categoria"/><input type="text" placeholder="Detalhe"/><button class="btn-del-row" onclick="delRow(this)">✕</button>';
+  document.getElementById('cm-points').appendChild(div);
+}
+function addStepRow() {
+  const div = document.createElement('div');
+  div.className = 'step-row';
+  div.innerHTML = '<input type="text" placeholder="Responsável"/><input type="text" placeholder="Ação"/><button class="btn-del-row" onclick="delRow(this)">✕</button>';
+  document.getElementById('cm-steps').appendChild(div);
+}
+function delRow(btn) { btn.closest('.point-row, .step-row').remove(); }
+
+async function saveColeta() {
+  const project  = document.getElementById('cm-project').value.trim();
+  const source_type = document.getElementById('cm-type').value;
+  const source_name = document.getElementById('cm-name').value.trim();
+  const source_role = document.getElementById('cm-role').value.trim();
+  const date     = document.getElementById('cm-date').value || null;
+  const summary  = document.getElementById('cm-summary').value.trim();
+  if (!project || !source_name) { showToast('Preencha projeto e nome da fonte'); return; }
+
+  const key_points = [...document.querySelectorAll('#cm-points .point-row')].map(r => {
+    const inputs = r.querySelectorAll('input');
+    return { category: inputs[0].value.trim(), detail: inputs[1].value.trim() };
+  }).filter(p => p.category);
+
+  const next_steps = [...document.querySelectorAll('#cm-steps .step-row')].map(r => {
+    const inputs = r.querySelectorAll('input');
+    return { owner: inputs[0].value.trim(), action: inputs[1].value.trim() };
+  }).filter(s => s.action);
+
+  const { data, error } = await sb.from('data_collections')
+    .insert({ project, source_type, source_name, source_role, date, summary, key_points, next_steps })
+    .select().single();
+  if (error) { showToast('Erro ao salvar coleta'); return; }
+  coletaData.unshift(data);
+  closeColetaModal();
+  renderColeta();
+  showToast('Coleta salva ✓');
+}
 
 // ── tab switching ──
 function switchTab(tab, el){
@@ -605,7 +851,9 @@ function switchTab(tab, el){
     document.querySelector('.btn-new').style.display='flex';
   } else {
     document.querySelector('.btn-new').style.display='none';
-    renderCalendar();
+    if(tab==='agenda') renderCalendar();
+    if(tab==='coleta' && !coletaLoaded) loadColeta();
+    else if(tab==='coleta') renderColeta();
   }
 }
 
