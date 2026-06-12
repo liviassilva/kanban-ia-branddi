@@ -238,6 +238,42 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 .btn-del-row{background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:4px;border-radius:4px;transition:color .1s;align-self:center;}
 .btn-del-row:hover{color:var(--coral);}
 
+/* ── rich text editor (Detalhamento) ── */
+.rte-wrap{border:1px solid var(--border2);border-radius:8px;background:var(--surface2);overflow:hidden;transition:border-color .15s,background .2s;}
+.rte-wrap:focus-within{border-color:var(--accent);}
+.rte-toolbar{display:flex;align-items:center;gap:2px;padding:6px 8px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.rte-btn{min-width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid transparent;border-radius:6px;color:var(--muted);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;padding:0 7px;transition:color .1s,background .1s,border-color .1s;}
+.rte-btn:hover{color:var(--text);background:var(--surface);}
+.rte-btn.active{color:var(--accent);background:rgba(37,99,235,.12);border-color:rgba(37,99,235,.25);}
+.rte-sep{width:1px;height:18px;background:var(--border2);margin:0 4px;flex-shrink:0;}
+.rte-editor{min-height:96px;max-height:300px;overflow-y:auto;padding:10px 12px;font-size:13px;line-height:1.6;color:var(--text);outline:none;}
+.rte-editor:empty:before{content:attr(data-placeholder);color:var(--muted);pointer-events:none;}
+.rte-editor ul,.rte-editor ol{margin:4px 0 4px 22px;}
+.rte-editor a{color:var(--accent2);}
+
+/* detalhamento renderizado no card (HTML rico) */
+.coleta-summary ul,.coleta-summary ol{margin:6px 0 6px 22px;}
+.coleta-summary a{color:var(--accent2);}
+.coleta-summary b,.coleta-summary strong{font-weight:600;}
+.coleta-summary p{margin:0 0 6px;}
+
+/* ── anexos: editor no modal ── */
+.attach-editor{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.attach-row{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;}
+.attach-icon{font-size:15px;flex-shrink:0;}
+.attach-info{flex:1;min-width:0;}
+.attach-name{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.attach-size{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
+.attach-del{background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:4px;border-radius:4px;transition:color .1s;flex-shrink:0;}
+.attach-del:hover{color:var(--coral);}
+.attach-uploading{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding:6px 2px;}
+
+/* ── anexos: render no card ── */
+.coleta-attachments{display:flex;flex-direction:column;gap:6px;}
+.coleta-attach-link{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--accent2);text-decoration:none;transition:border-color .15s;}
+.coleta-attach-link:hover{border-color:var(--border2);}
+.coleta-attach-link .attach-size{margin-left:auto;color:var(--muted);}
+
 /* toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:300;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -382,7 +418,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
 <!-- Coleta modal -->
 <div class="modal-bg" id="coleta-modal">
   <div class="modal coleta-modal">
-    <h3>Nova coleta de dados</h3>
+    <h3 id="coleta-modal-title">Nova coleta de dados</h3>
     <label>Projeto</label>
     <input type="text" id="cm-project" placeholder="Ex: Sistema Integrado"/>
     <div class="modal-row-3">
@@ -404,8 +440,21 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
     </div>
     <label>Data</label>
     <input type="date" id="cm-date"/>
-    <label>Resumo</label>
-    <textarea id="cm-summary" placeholder="Contexto geral da coleta..." style="min-height:80px"></textarea>
+    <label>Detalhamento</label>
+    <div class="rte-wrap">
+      <div class="rte-toolbar" data-target="cm-summary">
+        <button type="button" class="rte-btn" data-cmd="bold" title="Negrito (Ctrl+B)"><b>B</b></button>
+        <button type="button" class="rte-btn" data-cmd="italic" title="Itálico (Ctrl+I)"><i>I</i></button>
+        <button type="button" class="rte-btn" data-cmd="underline" title="Sublinhado (Ctrl+U)"><u>U</u></button>
+        <span class="rte-sep"></span>
+        <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Lista com marcadores">• Lista</button>
+        <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+        <span class="rte-sep"></span>
+        <button type="button" class="rte-btn" data-cmd="createLink" title="Inserir link">🔗</button>
+        <button type="button" class="rte-btn" data-cmd="removeFormat" title="Limpar formatação">⌫</button>
+      </div>
+      <div id="cm-summary" class="rte-editor" contenteditable="true" data-placeholder="Contexto geral da coleta..."></div>
+    </div>
     <label>Pontos-chave</label>
     <div class="points-editor" id="cm-points">
       <div class="point-row">
@@ -424,9 +473,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:18p
       </div>
     </div>
     <button class="btn-add-row" onclick="addStepRow()">+ Adicionar passo</button>
+    <label style="margin-top:16px">Anexos</label>
+    <div class="attach-editor" id="cm-attachments"></div>
+    <input type="file" id="cm-file-input" multiple style="display:none" onchange="handleAttachUpload(this)"/>
+    <button type="button" class="btn-add-row" onclick="document.getElementById('cm-file-input').click()">+ Adicionar anexo</button>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeColetaModal()">Cancelar</button>
-      <button class="btn-save" onclick="saveColeta()">Salvar</button>
+      <button class="btn-save" id="coleta-save-btn" onclick="saveColeta()">Salvar</button>
     </div>
   </div>
 </div>
@@ -711,6 +764,35 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 document.getElementById('tag-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTagManager();});
 document.getElementById('coleta-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeColetaModal();});
+
+// ── editor de texto rico: barra de ferramentas ──
+document.querySelectorAll('.rte-toolbar').forEach(tb=>{
+  tb.addEventListener('mousedown',e=>{
+    const btn=e.target.closest('.rte-btn'); if(!btn)return;
+    e.preventDefault(); // preserva a seleção dentro do editor
+    const cmd=btn.dataset.cmd;
+    if(cmd==='createLink'){
+      const url=prompt('Cole o link (URL):','https://');
+      if(url) document.execCommand('createLink',false,url);
+    } else {
+      document.execCommand(cmd,false,null);
+    }
+    updateRteState();
+  });
+});
+function updateRteState(){
+  document.querySelectorAll('.rte-toolbar .rte-btn[data-cmd]').forEach(btn=>{
+    const cmd=btn.dataset.cmd;
+    if(['bold','italic','underline','insertUnorderedList','insertOrderedList'].includes(cmd)){
+      try{ btn.classList.toggle('active',document.queryCommandState(cmd)); }catch(_){}
+    }
+  });
+}
+document.addEventListener('selectionchange',()=>{
+  const ed=document.getElementById('cm-summary');
+  const sel=document.getSelection();
+  if(ed&&sel&&sel.anchorNode&&ed.contains(sel.anchorNode)) updateRteState();
+});
 document.getElementById('m-title').addEventListener('keydown',e=>{if(e.key==='Enter')addCard();});
 document.getElementById('new-tag-name').addEventListener('keydown',e=>{if(e.key==='Enter')createTag();});
 
@@ -720,6 +802,8 @@ loadAll();
 // ── coleta de dados ──
 let coletaData = [];
 let coletaLoaded = false;
+let editingColetaId = null;
+let coletaAttachments = [];
 
 async function loadColeta() {
   const { data, error } = await sb.from('data_collections').select('*').order('date', { ascending: false });
@@ -746,6 +830,12 @@ function renderColeta() {
         <span class="coleta-step-owner">${esc(s.owner)}</span>
         <span class="coleta-step-action">${esc(s.action)}</span>
       </div>`).join('');
+    const atts = (c.attachments || []).map(a => `
+      <a class="coleta-attach-link" href="${esc(a.url)}" target="_blank" rel="noopener">
+        <span>${attachIcon(a.type, a.name)}</span>
+        <span class="attach-name">${esc(a.name)}</span>
+        <span class="attach-size">${fmtSize(a.size)}</span>
+      </a>`).join('');
     const dateStr = c.date ? new Date(c.date + 'T00:00:00').toLocaleDateString('pt-BR') : '';
     return `
     <div class="coleta-card" id="cc-${c.id}">
@@ -760,17 +850,19 @@ function renderColeta() {
         </div>
         <div class="coleta-meta">
           <span class="coleta-date">${dateStr}</span>
+          <button class="coleta-card-del" onclick="event.stopPropagation();editColeta('${c.id}')" title="Editar">✎</button>
           <button class="coleta-card-del" onclick="event.stopPropagation();deleteColeta('${c.id}')" title="Remover">✕</button>
           <span class="coleta-chevron">▶</span>
         </div>
       </div>
       <div class="coleta-card-body">
         <div class="coleta-section">
-          <div class="coleta-section-title">Resumo</div>
-          <div class="coleta-summary">${esc(c.summary)}</div>
+          <div class="coleta-section-title">Detalhamento</div>
+          <div class="coleta-summary">${c.summary || ''}</div>
         </div>
         ${pts ? `<div class="coleta-section"><div class="coleta-section-title">Pontos-chave</div><div class="coleta-points">${pts}</div></div>` : ''}
         ${steps ? `<div class="coleta-section"><div class="coleta-section-title">Próximos passos</div><div class="coleta-steps">${steps}</div></div>` : ''}
+        ${atts ? `<div class="coleta-section"><div class="coleta-section-title">Anexos</div><div class="coleta-attachments">${atts}</div></div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -787,15 +879,119 @@ async function deleteColeta(id) {
 }
 
 function openColetaModal() {
+  editingColetaId = null;
+  document.getElementById('coleta-modal-title').textContent = 'Nova coleta de dados';
+  document.getElementById('coleta-save-btn').textContent = 'Salvar';
   document.getElementById('cm-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('cm-summary').innerHTML = '';
+  coletaAttachments = [];
+  renderAttachments();
   document.getElementById('coleta-modal').classList.add('open');
   setTimeout(() => document.getElementById('cm-project').focus(), 60);
 }
+
+function editColeta(id) {
+  const c = coletaData.find(x => x.id === id);
+  if (!c) return;
+  editingColetaId = id;
+  document.getElementById('coleta-modal-title').textContent = 'Editar coleta de dados';
+  document.getElementById('coleta-save-btn').textContent = 'Salvar alterações';
+  document.getElementById('cm-project').value = c.project || '';
+  document.getElementById('cm-type').value = c.source_type || 'Entrevista';
+  document.getElementById('cm-name').value = c.source_name || '';
+  document.getElementById('cm-role').value = c.source_role || '';
+  document.getElementById('cm-date').value = c.date || new Date().toISOString().slice(0, 10);
+  document.getElementById('cm-summary').innerHTML = c.summary || '';
+
+  const pts = (c.key_points && c.key_points.length) ? c.key_points : [{ category: '', detail: '' }];
+  document.getElementById('cm-points').innerHTML = pts.map(p =>
+    `<div class="point-row"><input type="text" placeholder="Categoria" value="${esc(p.category || '')}"/><input type="text" placeholder="Detalhe" value="${esc(p.detail || '')}"/><button class="btn-del-row" onclick="delRow(this)">✕</button></div>`
+  ).join('');
+
+  const sts = (c.next_steps && c.next_steps.length) ? c.next_steps : [{ owner: '', action: '' }];
+  document.getElementById('cm-steps').innerHTML = sts.map(s =>
+    `<div class="step-row"><input type="text" placeholder="Responsável" value="${esc(s.owner || '')}"/><input type="text" placeholder="Ação" value="${esc(s.action || '')}"/><button class="btn-del-row" onclick="delRow(this)">✕</button></div>`
+  ).join('');
+
+  coletaAttachments = (c.attachments || []).map(a => ({ ...a }));
+  renderAttachments();
+
+  document.getElementById('coleta-modal').classList.add('open');
+  setTimeout(() => document.getElementById('cm-project').focus(), 60);
+}
+
 function closeColetaModal() {
   document.getElementById('coleta-modal').classList.remove('open');
-  ['cm-project','cm-name','cm-role','cm-summary'].forEach(id => document.getElementById(id).value = '');
+  editingColetaId = null;
+  document.getElementById('coleta-modal-title').textContent = 'Nova coleta de dados';
+  document.getElementById('coleta-save-btn').textContent = 'Salvar';
+  ['cm-project','cm-name','cm-role'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cm-summary').innerHTML = '';
+  coletaAttachments = [];
+  renderAttachments();
   document.getElementById('cm-points').innerHTML = '<div class="point-row"><input type="text" placeholder="Categoria"/><input type="text" placeholder="Detalhe"/><button class="btn-del-row" onclick="delRow(this)">✕</button></div>';
   document.getElementById('cm-steps').innerHTML = '<div class="step-row"><input type="text" placeholder="Responsável"/><input type="text" placeholder="Ação"/><button class="btn-del-row" onclick="delRow(this)">✕</button></div>';
+}
+
+// ── anexos ──
+function fmtSize(b) {
+  if (b == null) return '';
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(0) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
+}
+function attachIcon(type, name) {
+  const n = (name || '').toLowerCase();
+  if ((type || '').startsWith('image/')) return '🖼️';
+  if (n.endsWith('.pdf')) return '📄';
+  if (/\.(xls|xlsx|csv)$/.test(n)) return '📊';
+  if (/\.(doc|docx|txt)$/.test(n)) return '📝';
+  if (/\.(ppt|pptx)$/.test(n)) return '📑';
+  if (/\.(zip|rar|7z)$/.test(n)) return '🗜️';
+  return '📎';
+}
+function renderAttachments() {
+  const wrap = document.getElementById('cm-attachments');
+  if (!wrap) return;
+  wrap.innerHTML = coletaAttachments.map((a, i) => `
+    <div class="attach-row">
+      <span class="attach-icon">${attachIcon(a.type, a.name)}</span>
+      <div class="attach-info">
+        <a class="attach-name" href="${esc(a.url)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">${esc(a.name)}</a>
+        <div class="attach-size">${fmtSize(a.size)}</div>
+      </div>
+      <button type="button" class="attach-del" onclick="removeAttachment(${i})" title="Remover anexo">✕</button>
+    </div>`).join('');
+}
+async function handleAttachUpload(input) {
+  const files = [...input.files];
+  input.value = '';
+  if (!files.length) return;
+  const wrap = document.getElementById('cm-attachments');
+  for (const file of files) {
+    const note = document.createElement('div');
+    note.className = 'attach-uploading';
+    note.innerHTML = '<span class="spinner"></span> Enviando ' + esc(file.name) + '…';
+    wrap.appendChild(note);
+    const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = 'coletas/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '-' + safe;
+    const { error } = await sb.storage.from('coleta-anexos').upload(path, file, { upsert: false });
+    note.remove();
+    if (error) { showToast('Erro ao enviar ' + file.name); continue; }
+    const { data } = sb.storage.from('coleta-anexos').getPublicUrl(path);
+    coletaAttachments.push({ name: file.name, url: data.publicUrl, path, size: file.size, type: file.type });
+    renderAttachments();
+  }
+}
+function removeAttachment(i) {
+  coletaAttachments.splice(i, 1);
+  renderAttachments();
+}
+function getRTEValue(id) {
+  const el = document.getElementById(id);
+  if (!el) return '';
+  if (!el.textContent.trim() && !el.querySelector('img')) return '';
+  return el.innerHTML.trim();
 }
 
 function addPointRow() {
@@ -818,7 +1014,7 @@ async function saveColeta() {
   const source_name = document.getElementById('cm-name').value.trim();
   const source_role = document.getElementById('cm-role').value.trim();
   const date     = document.getElementById('cm-date').value || null;
-  const summary  = document.getElementById('cm-summary').value.trim();
+  const summary  = getRTEValue('cm-summary');
   if (!project || !source_name) { showToast('Preencha projeto e nome da fonte'); return; }
 
   const key_points = [...document.querySelectorAll('#cm-points .point-row')].map(r => {
@@ -831,14 +1027,25 @@ async function saveColeta() {
     return { owner: inputs[0].value.trim(), action: inputs[1].value.trim() };
   }).filter(s => s.action);
 
-  const { data, error } = await sb.from('data_collections')
-    .insert({ project, source_type, source_name, source_role, date, summary, key_points, next_steps })
-    .select().single();
-  if (error) { showToast('Erro ao salvar coleta'); return; }
-  coletaData.unshift(data);
-  closeColetaModal();
-  renderColeta();
-  showToast('Coleta salva ✓');
+  const attachments = coletaAttachments.map(a => ({ name: a.name, url: a.url, path: a.path, size: a.size, type: a.type }));
+  const payload = { project, source_type, source_name, source_role, date, summary, key_points, next_steps, attachments };
+
+  if (editingColetaId) {
+    const { data, error } = await sb.from('data_collections').update(payload).eq('id', editingColetaId).select().single();
+    if (error) { showToast('Erro ao salvar alterações'); return; }
+    const idx = coletaData.findIndex(c => c.id === editingColetaId);
+    if (idx >= 0) coletaData[idx] = data;
+    closeColetaModal();
+    renderColeta();
+    showToast('Coleta atualizada ✓');
+  } else {
+    const { data, error } = await sb.from('data_collections').insert(payload).select().single();
+    if (error) { showToast('Erro ao salvar coleta'); return; }
+    coletaData.unshift(data);
+    closeColetaModal();
+    renderColeta();
+    showToast('Coleta salva ✓');
+  }
 }
 
 // ── tab switching ──
