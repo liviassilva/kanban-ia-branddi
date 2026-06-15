@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Kanban IA — Branddi</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🎯</text></svg>"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:#0f0f11; --surface:#17171a; --surface2:#1e1e22;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --text:#f0eff4; --muted:#7b7a85;
+  --accent:#2563eb; --accent2:#60a5fa;
+  --teal:#2dd4bf; --coral:#fb7185; --amber:#fbbf24; --green:#34d399;
+  --red-dl:#ff6b6b; --yellow-dl:#fbbf24;
+  --toggle-bg:#2a2a2f; --toggle-knob:#2563eb;
+  --p-baixa:#34d399; --p-media:#60a5fa; --p-alta:#fbbf24; --p-urgente:#fb7185;
+}
+[data-theme="light"] {
+  --bg:#f4f3f8; --surface:#ffffff; --surface2:#f0eff5;
+  --border:rgba(0,0,0,0.07); --border2:rgba(0,0,0,0.13);
+  --text:#16141f; --muted:#8a8799;
+  --accent:#2563eb; --accent2:#1d4ed8;
+  --teal:#0e8a7a; --coral:#d63a55; --amber:#c07a10; --green:#0d9e75;
+  --red-dl:#d63a55; --yellow-dl:#b07010;
+  --toggle-bg:#e2e0ec; --toggle-knob:#2563eb;
+  --p-baixa:#0d9e75; --p-media:#2563eb; --p-alta:#c07a10; --p-urgente:#d63a55;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .2s,color .2s;}
+
+/* header */
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:50;transition:background .2s,border-color .2s;}
+.logo{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:-.01em;}
+.logo-icon{width:28px;height:28px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.header-right{display:flex;align-items:center;gap:12px;}
+.team-avatars{display:flex;}
+.team-avatars .av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;border:2px solid var(--surface);margin-left:-6px;cursor:default;transition:transform .15s,border-color .2s;}
+.team-avatars .av:first-child{margin-left:0;}
+.team-avatars .av:hover{transform:translateY(-2px);z-index:5;}
+.av-k{background:#2563eb;color:#fff;} .av-l{background:#2dd4bf;color:#0f1a19;} .av-me{background:#fb7185;color:#fff;}
+.theme-toggle{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;}
+.theme-toggle-track{width:38px;height:22px;border-radius:11px;background:var(--toggle-bg);position:relative;transition:background .2s;border:1px solid var(--border2);flex-shrink:0;}
+.theme-toggle-knob{position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--toggle-knob);transition:transform .2s;}
+[data-theme="light"] .theme-toggle-knob{transform:translateX(16px);}
+.theme-toggle-icon{font-size:14px;line-height:1;}
+.btn-new{display:flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s,transform .1s;}
+.btn-new:hover{background:var(--accent2);}
+.btn-new:active{transform:scale(.97);}
+
+/* board */
+.board-wrap{padding:24px 28px 40px;overflow-x:auto;}
+.board{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:16px;min-width:900px;}
+
+/* columns */
+.col{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;min-height:200px;display:flex;flex-direction:column;gap:10px;transition:background .2s,border-color .2s;}
+.col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;}
+.col-label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);}
+.dot{width:7px;height:7px;border-radius:50%;}
+.col-count{font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);color:var(--muted);padding:2px 8px;border-radius:20px;border:1px solid var(--border);transition:background .2s;}
+.col-add-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;line-height:1;padding:2px 4px;border-radius:5px;transition:color .1s,background .1s;}
+.col-add-btn:hover{color:var(--text);background:var(--surface2);}
+
+/* cards */
+.card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;cursor:grab;transition:border-color .15s,transform .15s,box-shadow .15s,background .2s;position:relative;}
+.card:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.15);}
+.card.dragging{opacity:.35;cursor:grabbing;}
+
+/* priority stripe */
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:10px 0 0 10px;background:transparent;transition:background .2s;}
+.card.prio-baixa::before{background:var(--p-baixa);}
+.card.prio-media::before{background:var(--p-media);}
+.card.prio-alta::before{background:var(--p-alta);}
+.card.prio-urgente::before{background:var(--p-urgente);}
+
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px;}
+.card-title{font-size:13px;font-weight:500;color:var(--text);line-height:1.45;flex:1;padding-right:4px;}
+.card-prio-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.prio-badge-baixa  {background:rgba(52,211,153,.13);color:var(--p-baixa);}
+.prio-badge-media  {background:rgba(96,165,250,.13);color:var(--p-media);}
+.prio-badge-alta   {background:rgba(251,191,36,.13);color:var(--p-alta);}
+.prio-badge-urgente{background:rgba(251,113,133,.15);color:var(--p-urgente);}
+
+.card-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:9px;white-space:pre-wrap;word-break:break-word;}
+.card-deadline{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-family:'DM Mono',monospace;border-radius:5px;padding:2px 7px;margin-bottom:9px;}
+.deadline-ok  {background:rgba(45,212,191,.12);color:var(--teal);}
+.deadline-soon{background:rgba(251,191,36,.15);color:var(--yellow-dl);}
+.deadline-late{background:rgba(255,107,107,.15);color:var(--red-dl);}
+.card-footer{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.card-footer-right{margin-left:auto;display:flex;align-items:center;gap:5px;}
+.tag{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;cursor:default;}
+.card-av{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;}
+.card-del{position:absolute;top:8px;right:9px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px;border-radius:4px;opacity:0;transition:opacity .1s,color .1s;}
+.card:hover .card-del{opacity:1;}
+.card-del:hover{color:var(--coral);}
+
+/* drop zone */
+.drop-zone{flex:1;min-height:48px;border-radius:8px;border:1.5px dashed transparent;transition:border-color .15s,background .15s;}
+.drop-zone.active{border-color:var(--accent);background:rgba(37,99,235,.06);}
+.empty{font-size:12px;color:var(--muted);text-align:center;padding:14px 0 6px;}
+
+/* modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:24px;width:420px;max-width:94vw;max-height:92vh;overflow-y:auto;animation:slideUp .2s ease;transition:background .2s;}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:18px;}
+.modal label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px;margin-top:14px;}
+.modal label:first-of-type{margin-top:0;}
+.modal input,.modal select,.modal textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:border-color .15s,background .2s,color .2s;}
+.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:var(--accent);}
+.modal select option{background:var(--surface2);color:var(--text);}
+.modal textarea{resize:vertical;min-height:72px;line-height:1.5;}
+.modal input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.5);cursor:pointer;}
+[data-theme="dark"] .modal input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.7);}
+.modal-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.modal-row>div{display:flex;flex-direction:column;}
+.modal-row label{margin-top:0;}
+.modal-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end;}
+.btn-cancel{background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:8px;padding:8px 16px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:color .1s;}
+.btn-cancel:hover{color:var(--text);}
+.btn-save{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s;}
+.btn-save:hover{background:var(--accent2);}
+
+/* tag manager */
+.tag-manager-modal{width:380px;}
+.tag-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;max-height:260px;overflow-y:auto;}
+.tag-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);}
+.tag-row-swatch{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.tag-row-name{flex:1;font-size:13px;}
+.tag-row-del{background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px;border-radius:4px;transition:color .1s;}
+.tag-row-del:hover{color:var(--coral);}
+.new-tag-row{display:grid;grid-template-columns:1fr 110px auto;gap:8px;align-items:end;}
+.new-tag-row label{margin-top:0;}
+.color-select-wrap{display:flex;flex-direction:column;}
+.btn-add-tag{height:37px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:0 14px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);cursor:pointer;transition:background .15s;white-space:nowrap;}
+.btn-add-tag:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-manage-tags{background:none;border:1px solid var(--border2);border-radius:8px;padding:7px 12px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--muted);cursor:pointer;transition:color .1s,border-color .1s;margin-top:6px;}
+.btn-manage-tags:hover{color:var(--text);border-color:var(--border2);}
+
+/* tag select pills in modal */
+.tag-picker{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0 4px;}
+.tag-pill{font-size:12px;padding:4px 11px;border-radius:20px;cursor:pointer;border:1.5px solid transparent;transition:opacity .12s,border-color .12s;opacity:.55;}
+.tag-pill.selected{opacity:1;border-color:rgba(255,255,255,.3);}
+[data-theme="light"] .tag-pill.selected{border-color:rgba(0,0,0,.25);}
+
+/* owner pills */
+.owner-pill{font-size:12px;padding:4px 11px;border-radius:20px;cursor:pointer;border:1.5px solid transparent;transition:opacity .12s,border-color .12s;opacity:.55;font-weight:600;}
+.owner-pill.selected{opacity:1;border-color:rgba(255,255,255,.3);}
+[data-theme="light"] .owner-pill.selected{border-color:rgba(0,0,0,.25);}
+
+
+/* ── nav tabs ── */
+.nav-tabs{display:flex;gap:2px;padding:0 28px;background:var(--surface);border-bottom:1px solid var(--border);transition:background .2s;}
+.nav-tab{padding:12px 18px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;user-select:none;}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── pages ── */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── calendar ── */
+.cal-wrap{padding:20px 28px 40px;display:flex;flex-direction:column;height:calc(100vh - 108px);overflow:hidden;}
+.cal-columns{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;flex:1;overflow:hidden;min-width:0;}
+.cal-section{display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.cal-section-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-shrink:0;}
+.cal-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.cal-name{font-size:14px;font-weight:600;}
+.cal-grid-wrap{flex:1;overflow-y:auto;overflow-x:hidden;border:1px solid var(--border);border-radius:12px;}
+.cal-grid-wrap::-webkit-scrollbar{width:4px;}
+.cal-grid-wrap::-webkit-scrollbar-track{background:transparent;}
+.cal-grid-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+.cal-grid{display:grid;grid-template-columns:40px repeat(5,1fr);}
+.cal-head-cell{padding:8px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2);position:sticky;top:0;z-index:2;}
+.cal-head-cell:last-child{border-right:none;}
+.cal-hour-label{padding:0 4px;font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);display:flex;align-items:flex-start;padding-top:6px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2);position:sticky;left:0;z-index:1;}
+.cal-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:44px;position:relative;transition:background .1s;}
+.cal-cell:last-child{border-right:none;}
+.cal-cell:hover{background:rgba(37,99,235,.04);}
+.cal-input{width:100%;height:100%;min-height:44px;background:transparent;border:none;outline:none;resize:none;font-size:11px;font-family:'DM Sans',sans-serif;color:var(--text);padding:5px 6px;line-height:1.4;cursor:text;}
+.cal-input::placeholder{color:var(--border2);}
+.cal-input:focus{background:rgba(37,99,235,.06);}
+.cal-cell.has-content{background:rgba(37,99,235,.07);}
+.cal-cell.has-content:hover{background:rgba(37,99,235,.12);}
+
+
+/* ── coleta de dados ── */
+.coleta-wrap{padding:28px;max-width:1200px;}
+.coleta-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.coleta-header h2{font-size:18px;font-weight:600;}
+.btn-coleta-new{display:flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s;}
+.btn-coleta-new:hover{background:var(--accent2);}
+.coleta-list{display:flex;flex-direction:column;gap:14px;}
+.coleta-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .15s;}
+.coleta-card:hover{border-color:var(--border2);}
+.coleta-card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;gap:12px;}
+.coleta-card-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0;}
+.coleta-project-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:rgba(37,99,235,.13);color:var(--accent);white-space:nowrap;flex-shrink:0;}
+.coleta-source-type{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--surface2);color:var(--muted);white-space:nowrap;flex-shrink:0;}
+.coleta-title{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.coleta-subtitle{font-size:12px;color:var(--muted);margin-top:2px;}
+.coleta-meta{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.coleta-date{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);}
+.coleta-chevron{color:var(--muted);font-size:16px;transition:transform .2s;flex-shrink:0;}
+.coleta-card.open .coleta-chevron{transform:rotate(90deg);}
+.coleta-card-body{display:none;padding:0 20px 20px;border-top:1px solid var(--border);}
+.coleta-card.open .coleta-card-body{display:block;}
+.coleta-section{margin-top:18px;}
+.coleta-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;}
+.coleta-summary{font-size:13px;color:var(--text);line-height:1.65;background:var(--surface2);border-radius:8px;padding:12px 14px;}
+.coleta-points{display:flex;flex-direction:column;gap:8px;}
+.coleta-point{background:var(--surface2);border-radius:8px;padding:10px 14px;border-left:3px solid var(--accent);}
+.coleta-point-cat{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.coleta-point-detail{font-size:12px;color:var(--muted);line-height:1.55;}
+.coleta-steps{display:flex;flex-direction:column;gap:6px;}
+.coleta-step{display:flex;align-items:flex-start;gap:10px;background:var(--surface2);border-radius:8px;padding:9px 14px;}
+.coleta-step-owner{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:rgba(37,99,235,.13);color:var(--accent);white-space:nowrap;flex-shrink:0;margin-top:1px;}
+.coleta-step-action{font-size:12px;color:var(--text);line-height:1.5;}
+.coleta-card-del{background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:4px;border-radius:4px;transition:color .1s;}
+.coleta-card-del:hover{color:var(--coral);}
+
+/* coleta modal */
+.coleta-modal{width:520px;}
+.coleta-modal .modal-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.coleta-modal .modal-row-3>div{display:flex;flex-direction:column;}
+.coleta-modal .modal-row-3 label{margin-top:0;}
+.points-editor,.steps-editor{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.point-row,.step-row{display:grid;gap:6px;align-items:start;}
+.point-row{grid-template-columns:1fr 2fr auto;}
+.step-row{grid-template-columns:120px 1fr auto;}
+.point-row input,.step-row input,.point-row textarea,.step-row textarea{font-size:12px;padding:7px 10px;}
+.btn-add-row{background:none;border:1px dashed var(--border2);border-radius:8px;padding:6px;font-size:12px;color:var(--muted);cursor:pointer;transition:color .1s,border-color .1s;width:100%;margin-top:2px;}
+.btn-add-row:hover{color:var(--text);border-color:var(--border2);}
+.btn-del-row{background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:4px;border-radius:4px;transition:color .1s;align-self:center;}
+.btn-del-row:hover{color:var(--coral);}
+
+
+/* ── acessos ── */
+.acessos-wrap{padding:28px;max-width:1100px;}
+.acessos-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.acessos-header h2{font-size:18px;font-weight:600;}
+.acessos-cats{display:flex;flex-direction:column;gap:24px;}
+.acessos-cat-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.acessos-cat-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.acessos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+.acesso-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;transition:border-color .15s,box-shadow .15s;position:relative;}
+.acesso-card:hover{border-color:var(--border2);box-shadow:0 2px 12px rgba(0,0,0,.12);}
+.acesso-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px;}
+.acesso-nome{font-size:14px;font-weight:600;color:var(--text);}
+.acesso-url{font-size:11px;color:var(--accent);text-decoration:none;margin-top:2px;display:block;word-break:break-all;}
+.acesso-url:hover{text-decoration:underline;}
+.acesso-card-del{background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:2px 4px;border-radius:4px;opacity:0;transition:opacity .1s,color .1s;flex-shrink:0;}
+.acesso-card:hover .acesso-card-del{opacity:1;}
+.acesso-card-del:hover{color:var(--coral);}
+.acesso-fields{display:flex;flex-direction:column;gap:6px;}
+.acesso-field{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:7px;padding:6px 10px;}
+.acesso-field-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);width:36px;flex-shrink:0;}
+.acesso-field-value{font-size:12px;font-family:'DM Mono',monospace;color:var(--text);flex:1;word-break:break-all;}
+.acesso-field-value.senha-hidden{letter-spacing:2px;color:var(--muted);}
+.acesso-copy{background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;padding:2px 4px;border-radius:4px;transition:color .1s;flex-shrink:0;}
+.acesso-copy:hover{color:var(--accent);}
+.acesso-toggle{background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;padding:2px 4px;border-radius:4px;transition:color .1s;flex-shrink:0;}
+.acesso-toggle:hover{color:var(--text);}
+.acesso-notas{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;font-style:italic;}
+
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:300;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.loading{display:flex;align-items:center;justify-content:center;height:200px;color:var(--muted);font-size:13px;gap:8px;}
+.spinner{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🎯</div>
+    Projetos de IA
+  </div>
+  <div class="header-right">
+    <div class="team-avatars">
+      <div class="av av-k" title="Keila">K</div>
+      <div class="av av-l" title="Lívia">L</div>
+      <div class="av av-me" title="Maria Eduarda">ME</div>
+    </div>
+    <div class="theme-toggle" onclick="toggleTheme()" title="Alternar tema" role="button" aria-label="Alternar tema">
+      <span class="theme-toggle-icon" id="theme-icon">🌙</span>
+      <div class="theme-toggle-track"><div class="theme-toggle-knob"></div></div>
+    </div>
+    <button class="btn-new" onclick="openModal()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Novo card
+    </button>
+  </div>
+</header>
+
+<nav class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('kanban',this)">📋 Kanban</div>
+  <div class="nav-tab" onclick="switchTab('agenda',this)">📅 Agenda</div>
+  <div class="nav-tab" onclick="switchTab('coleta',this)">🔍 Coleta de Dados</div>
+  <div class="nav-tab" onclick="switchTab('acessos',this)">🔑 Acessos</div>
+</nav>
+
+<div id="page-kanban" class="page active">
+<div class="board-wrap">
+  <div class="board" id="board">
+    <div class="loading"><div class="spinner"></div> Carregando...</div>
+  </div>
+</div>
+</div><!-- /page-kanban -->
+
+<!-- Agenda page -->
+<div id="page-agenda" class="page">
+<div class="cal-wrap" id="cal-wrap">
+  <div class="loading"><div class="spinner"></div> Carregando agenda...</div>
+</div>
+</div>
+
+<!-- Coleta de Dados page -->
+<div id="page-coleta" class="page">
+  <div class="coleta-wrap">
+    <div class="coleta-header">
+      <h2>Coleta de Dados</h2>
+      <button class="btn-coleta-new" onclick="openColetaModal()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Nova coleta
+      </button>
+    </div>
+    <div class="coleta-list" id="coleta-list">
+      <div class="loading"><div class="spinner"></div> Carregando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Acessos page -->
+<div id="page-acessos" class="page">
+  <div class="acessos-wrap">
+    <div class="acessos-header">
+      <h2>Acessos</h2>
+      <button class="btn-coleta-new" onclick="openAcessoModal()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Novo acesso
+      </button>
+    </div>
+    <div class="acessos-cats" id="acessos-cats">
+      <div class="loading"><div class="spinner"></div> Carregando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Card modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Novo card</h3>
+    <label>Título</label>
+    <input type="text" id="m-title" placeholder="Descreva a tarefa..."/>
+    <label>Descrição</label>
+    <textarea id="m-desc" placeholder="Detalhes, contexto, links..."></textarea>
+    <div class="modal-row">
+      <div>
+        <label>Coluna</label>
+        <select id="m-col">
+          <option value="backlog">Backlog</option>
+          <option value="andamento">Em andamento</option>
+          <option value="revisao">Em revisão</option>
+          <option value="concluido">Concluído</option>
+        </select>
+      </div>
+      <div>
+        <label>Prioridade</label>
+        <select id="m-priority">
+          <option value="baixa">🟢 Baixa</option>
+          <option value="media" selected>🔵 Média</option>
+          <option value="alta">🟡 Alta</option>
+          <option value="urgente">🔴 Urgente</option>
+        </select>
+      </div>
+    </div>
+    <label>Responsáveis</label>
+    <div class="tag-picker" id="m-owner-picker"></div>
+    <label>Prazo</label>
+    <input type="date" id="m-deadline"/>
+    <label>Tags</label>
+    <div class="tag-picker" id="m-tag-picker"></div>
+    <button class="btn-manage-tags" onclick="openTagManager()">✦ Gerenciar tags</button>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="addCard()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tag manager modal -->
+<div class="modal-bg" id="tag-modal">
+  <div class="modal tag-manager-modal">
+    <h3>Gerenciar tags</h3>
+    <div class="tag-list" id="tag-list"></div>
+    <div class="new-tag-row">
+      <div>
+        <label>Nova tag</label>
+        <input type="text" id="new-tag-name" placeholder="Nome da tag..."/>
+      </div>
+      <div class="color-select-wrap">
+        <label>Cor</label>
+        <select id="new-tag-color">
+          <option value="purple">Roxo</option>
+          <option value="teal">Verde-água</option>
+          <option value="blue">Azul</option>
+          <option value="coral">Coral</option>
+          <option value="amber">Âmbar</option>
+          <option value="green">Verde</option>
+          <option value="pink">Rosa</option>
+        </select>
+      </div>
+      <button class="btn-add-tag" onclick="createTag()">Adicionar</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="closeTagManager()">Feito</button>
+    </div>
+  </div>
+</div>
+
+<!-- Acesso modal -->
+<div class="modal-bg" id="acesso-modal">
+  <div class="modal" style="width:400px">
+    <h3>Novo acesso</h3>
+    <label>Nome</label>
+    <input type="text" id="am-nome" placeholder="Ex: Supabase, Google Analytics..."/>
+    <div class="modal-row">
+      <div>
+        <label>Categoria</label>
+        <input type="text" id="am-cat" placeholder="Ex: Plataformas, IA, CRM..."/>
+      </div>
+      <div>
+        <label>URL</label>
+        <input type="url" id="am-url" placeholder="https://..."/>
+      </div>
+    </div>
+    <label>Login / E-mail</label>
+    <input type="text" id="am-login" placeholder="usuario@email.com"/>
+    <label>Senha</label>
+    <input type="text" id="am-senha" placeholder="••••••••"/>
+    <label>Notas</label>
+    <textarea id="am-notas" placeholder="Observações, 2FA, detalhes..." style="min-height:60px"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAcessoModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveAcesso()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Coleta modal -->
+<div class="modal-bg" id="coleta-modal">
+  <div class="modal coleta-modal">
+    <h3>Nova coleta de dados</h3>
+    <label>Projeto</label>
+    <input type="text" id="cm-project" placeholder="Ex: Sistema Integrado"/>
+    <div class="modal-row-3">
+      <div><label>Tipo de fonte</label>
+        <select id="cm-type">
+          <option>Entrevista</option>
+          <option>Pesquisa</option>
+          <option>Observação</option>
+          <option>Documento</option>
+          <option>Workshop</option>
+        </select>
+      </div>
+      <div><label>Nome da fonte</label>
+        <input type="text" id="cm-name" placeholder="Ex: Alícia Bortolote"/>
+      </div>
+      <div><label>Cargo / Papel</label>
+        <input type="text" id="cm-role" placeholder="Ex: CS Lead"/>
+      </div>
+    </div>
+    <label>Data</label>
+    <input type="date" id="cm-date"/>
+    <label>Resumo</label>
+    <textarea id="cm-summary" placeholder="Contexto geral da coleta..." style="min-height:80px"></textarea>
+    <label>Pontos-chave</label>
+    <div class="points-editor" id="cm-points">
+      <div class="point-row">
+        <input type="text" placeholder="Categoria"/>
+        <input type="text" placeholder="Detalhe"/>
+        <button class="btn-del-row" onclick="delRow(this)">✕</button>
+      </div>
+    </div>
+    <button class="btn-add-row" onclick="addPointRow()">+ Adicionar ponto</button>
+    <label style="margin-top:16px">Próximos passos</label>
+    <div class="steps-editor" id="cm-steps">
+      <div class="step-row">
+        <input type="text" placeholder="Responsável"/>
+        <input type="text" placeholder="Ação"/>
+        <button class="btn-del-row" onclick="delRow(this)">✕</button>
+      </div>
+    </div>
+    <button class="btn-add-row" onclick="addStepRow()">+ Adicionar passo</button>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeColetaModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveColeta()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL='https://lcwxsikveyudtwiutjra.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxjd3hzaWt2ZXl1ZHR3aXV0anJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NDg0NTksImV4cCI6MjA5MzEyNDQ1OX0.rHfsDoZ6KZJKQtlsuZAHgWgho7S1frRslzYeAXTTrRA';
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+
+const COLS=[
+  {id:'backlog',label:'Backlog',dotColor:'#7b7a85'},
+  {id:'andamento',label:'Em andamento',dotColor:'#60a5fa'},
+  {id:'revisao',label:'Em revisão',dotColor:'#fbbf24'},
+  {id:'concluido',label:'Concluído',dotColor:'#34d399'},
+];
+const AV_CLASSES={K:'av-k',L:'av-l',ME:'av-me'};
+const OWNER_NAMES={K:'Keila',L:'Lívia',ME:'Maria Eduarda'};
+const PRIO_LABEL={baixa:'Baixa',media:'Média',alta:'Alta',urgente:'Urgente'};
+
+// tag color map → CSS var-like hex per theme
+const COLOR_DEFS={
+  purple:{bg:'rgba(37,99,235,.15)',text:'#60a5fa',swatch:'#2563eb'},
+  teal:  {bg:'rgba(45,212,191,.13)', text:'#2dd4bf',swatch:'#2dd4bf'},
+  blue:  {bg:'rgba(96,165,250,.13)', text:'#60a5fa',swatch:'#60a5fa'},
+  coral: {bg:'rgba(251,113,133,.13)',text:'#fb7185',swatch:'#fb7185'},
+  amber: {bg:'rgba(251,191,36,.13)', text:'#fbbf24',swatch:'#fbbf24'},
+  green: {bg:'rgba(52,211,153,.13)', text:'#34d399',swatch:'#34d399'},
+  pink:  {bg:'rgba(232,121,249,.13)',text:'#e879f9',swatch:'#e879f9'},
+};
+
+let allCards=[];
+let allTags=[];
+let draggedId=null;
+let selectedTags=new Set();
+let selectedOwners=new Set();
+
+// ── theme ──
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  document.getElementById('theme-icon').textContent=t==='dark'?'🌙':'☀️';
+  localStorage.setItem('kanban-theme',t);
+}
+function toggleTheme(){
+  applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+}
+(()=>{
+  const s=localStorage.getItem('kanban-theme');
+  applyTheme(s||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
+})();
+
+// ── load ──
+async function loadAll(){
+  const [cardsRes,tagsRes]=await Promise.all([
+    sb.from('kanban_cards').select('*').order('position'),
+    sb.from('kanban_tags').select('*').order('name'),
+  ]);
+  if(cardsRes.error){showToast('Erro ao carregar cards');return;}
+  if(tagsRes.error){showToast('Erro ao carregar tags');return;}
+  allCards=cardsRes.data||[];
+  allTags=tagsRes.data||[];
+  renderBoard();
+}
+
+// ── board ──
+function deadlineInfo(d){
+  if(!d)return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  const dt=new Date(d+'T00:00:00');
+  const diff=Math.round((dt-today)/86400000);
+  const label=dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  if(diff<0) return{label:'⚠ '+label,cls:'deadline-late'};
+  if(diff<=3)return{label:'⏳ '+label,cls:'deadline-soon'};
+  return{label:'📅 '+label,cls:'deadline-ok'};
+}
+
+function tagById(id){return allTags.find(t=>t.id===id);}
+function tagStyle(color){const c=COLOR_DEFS[color]||COLOR_DEFS.purple;return`background:${c.bg};color:${c.text};`;}
+
+function renderBoard(){
+  const board=document.getElementById('board');
+  board.innerHTML='';
+  COLS.forEach(col=>{
+    const cards=allCards.filter(c=>c.col===col.id);
+    const colEl=document.createElement('div');
+    colEl.className='col';
+    colEl.innerHTML=`
+      <div class="col-header">
+        <span class="col-label">
+          <span class="dot" style="background:${col.dotColor}"></span>
+          ${col.label}
+          <span class="col-count">${cards.length}</span>
+        </span>
+        <button class="col-add-btn" onclick="openModal('${col.id}')" title="Adicionar card">+</button>
+      </div>`;
+    if(!cards.length){
+      const e=document.createElement('div');e.className='empty';e.textContent='Nenhum card';colEl.appendChild(e);
+    }
+    cards.forEach(c=>colEl.appendChild(makeCard(c)));
+    const dz=document.createElement('div');
+    dz.className='drop-zone';
+    dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('active');});
+    dz.addEventListener('dragleave',()=>dz.classList.remove('active'));
+    dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('active');moveCard(col.id);});
+    colEl.appendChild(dz);
+    board.appendChild(colEl);
+  });
+}
+
+function makeCard(card){
+  const el=document.createElement('div');
+  el.className=`card prio-${card.priority||'media'}`;
+  el.draggable=true;
+  el.dataset.id=card.id;
+
+  const prio=card.priority||'media';
+  const prioBadge=`<span class="card-prio-badge prio-badge-${prio}">${PRIO_LABEL[prio]}</span>`;
+  const descHtml=card.description?`<div class="card-desc">${esc(card.description)}</div>`:'';
+  const dl=deadlineInfo(card.deadline);
+  const dlHtml=dl?`<div class="card-deadline ${dl.cls}">${dl.label}</div>`:'';
+  const ownerList=card.owners&&card.owners.length?card.owners:(card.owner?[card.owner]:[]);
+  const avHtml=ownerList.map(o=>`<div class="card-av ${AV_CLASSES[o]||'av-k'}" title="${OWNER_NAMES[o]||o}" style="margin-left:-4px;">${o}</div>`).join('');
+
+  // tags
+  let tagsHtml='';
+  if(card.tag){
+    // legacy single tag string
+    tagsHtml=`<span class="tag" style="background:rgba(37,99,235,.15);color:#60a5fa;">${esc(card.tag)}</span>`;
+  } else if(card.tags&&card.tags.length){
+    tagsHtml=card.tags.map(tid=>{
+      const t=tagById(tid);
+      if(!t)return'';
+      return`<span class="tag" style="${tagStyle(t.color)}">${esc(t.name)}</span>`;
+    }).join('');
+  }
+
+  el.innerHTML=`
+    <button class="card-del" onclick="deleteCard('${card.id}')" title="Remover">✕</button>
+    <div class="card-top">
+      <div class="card-title">${esc(card.title)}</div>
+      ${prioBadge}
+    </div>
+    ${descHtml}
+    ${dlHtml}
+    <div class="card-footer">
+      ${tagsHtml}
+      <div class="card-footer-right">${avHtml}</div>
+    </div>`;
+
+  el.addEventListener('dragstart',()=>{draggedId=card.id;el.classList.add('dragging');});
+  el.addEventListener('dragend',()=>{el.classList.remove('dragging');draggedId=null;});
+  return el;
+}
+
+async function moveCard(colId){
+  if(!draggedId)return;
+  const card=allCards.find(c=>c.id===draggedId);
+  if(!card||card.col===colId)return;
+  card.col=colId;
+  renderBoard();
+  await sb.from('kanban_cards').update({col:colId}).eq('id',draggedId);
+}
+
+async function deleteCard(id){
+  allCards=allCards.filter(c=>c.id!==id);
+  renderBoard();
+  await sb.from('kanban_cards').delete().eq('id',id);
+}
+
+// ── card modal ──
+function openModal(colId){
+  if(colId)document.getElementById('m-col').value=colId;
+  selectedTags=new Set();
+  selectedOwners=new Set();
+  renderTagPicker();
+  renderOwnerPicker();
+  document.getElementById('modal').classList.add('open');
+  setTimeout(()=>document.getElementById('m-title').focus(),60);
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('open');
+  ['m-title','m-desc','m-deadline'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-priority').value='media';
+  selectedTags=new Set();
+  selectedOwners=new Set();
+}
+
+function renderTagPicker(){
+  const picker=document.getElementById('m-tag-picker');
+  if(!allTags.length){picker.innerHTML='<span style="font-size:12px;color:var(--muted)">Nenhuma tag criada ainda.</span>';return;}
+  picker.innerHTML=allTags.map(t=>{
+    const sel=selectedTags.has(t.id)?'selected':'';
+    return`<span class="tag-pill ${sel}" style="${tagStyle(t.color)}" onclick="toggleTagPill('${t.id}',this)">${esc(t.name)}</span>`;
+  }).join('');
+}
+
+function renderOwnerPicker(){
+  const OWNERS=[{id:'K',label:'Keila'},{id:'L',label:'Lívia'},{id:'ME',label:'Maria Eduarda'}];
+  const picker=document.getElementById('m-owner-picker');
+  picker.innerHTML=OWNERS.map(o=>{
+    const sel=selectedOwners.has(o.id)?'selected':'';
+    const style=o.id==='K'?'background:rgba(37,99,235,.15);color:#60a5fa;':
+                 o.id==='L'?'background:rgba(45,212,191,.13);color:#2dd4bf;':
+                             'background:rgba(251,113,133,.13);color:#fb7185;';
+    return`<span class="owner-pill ${sel}" style="${style}" onclick="toggleOwnerPill('${o.id}',this)">${o.label}</span>`;
+  }).join('');
+}
+
+function toggleOwnerPill(id,el){
+  if(selectedOwners.has(id)){selectedOwners.delete(id);el.classList.remove('selected');}
+  else{selectedOwners.add(id);el.classList.add('selected');}
+}
+
+function toggleTagPill(id,el){
+  if(selectedTags.has(id)){selectedTags.delete(id);el.classList.remove('selected');}
+  else{selectedTags.add(id);el.classList.add('selected');}
+}
+
+async function addCard(){
+  const title=document.getElementById('m-title').value.trim();
+  if(!title)return;
+  const col        =document.getElementById('m-col').value;
+  const priority   =document.getElementById('m-priority').value;
+  const owners     =[...selectedOwners];
+  const deadline   =document.getElementById('m-deadline').value||null;
+  const description=document.getElementById('m-desc').value.trim();
+  const tags       =[...selectedTags];
+  const pos        =allCards.filter(c=>c.col===col).length;
+  const{data,error}=await sb.from('kanban_cards').insert({title,col,priority,owners,deadline,description,tags,position:pos}).select().single();
+  if(error){showToast('Erro ao criar card');return;}
+  allCards.push(data);
+  closeModal();renderBoard();showToast('Card criado ✓');
+}
+
+// ── tag manager ──
+function openTagManager(){
+  renderTagList();
+  document.getElementById('tag-modal').classList.add('open');
+}
+function closeTagManager(){
+  document.getElementById('tag-modal').classList.remove('open');
+  renderTagPicker();
+}
+
+function renderTagList(){
+  const list=document.getElementById('tag-list');
+  if(!allTags.length){list.innerHTML='<p style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0;">Nenhuma tag ainda.</p>';return;}
+  list.innerHTML=allTags.map(t=>`
+    <div class="tag-row">
+      <span class="tag-row-swatch" style="background:${COLOR_DEFS[t.color]?.swatch||'#2563eb'}"></span>
+      <span class="tag-row-name">${esc(t.name)}</span>
+      <button class="tag-row-del" onclick="deleteTag('${t.id}')" title="Remover">✕</button>
+    </div>`).join('');
+}
+
+async function createTag(){
+  const name=document.getElementById('new-tag-name').value.trim();
+  const color=document.getElementById('new-tag-color').value;
+  if(!name)return;
+  const{data,error}=await sb.from('kanban_tags').insert({name,color}).select().single();
+  if(error){showToast('Erro ao criar tag (nome duplicado?)');return;}
+  allTags.push(data);
+  document.getElementById('new-tag-name').value='';
+  renderTagList();showToast('Tag criada ✓');
+}
+
+async function deleteTag(id){
+  allTags=allTags.filter(t=>t.id!==id);
+  renderTagList();
+  await sb.from('kanban_tags').delete().eq('id',id);
+}
+
+// ── utils ──
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+document.getElementById('tag-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeTagManager();});
+document.getElementById('coleta-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeColetaModal();});
+document.getElementById('acesso-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeAcessoModal();});
+document.getElementById('m-title').addEventListener('keydown',e=>{if(e.key==='Enter')addCard();});
+document.getElementById('new-tag-name').addEventListener('keydown',e=>{if(e.key==='Enter')createTag();});
+
+loadAll();
+
+
+
+// ── acessos ──
+let acessosData = [];
+let acessosLoaded = false;
+let senhasVisiveis = new Set();
+
+async function loadAcessos() {
+  const { data, error } = await sb.from('acessos').select('*').order('categoria').order('nome');
+  if (error) { showToast('Erro ao carregar acessos'); return; }
+  acessosData = data || [];
+  renderAcessos();
+  acessosLoaded = true;
+}
+
+function renderAcessos() {
+  const wrap = document.getElementById('acessos-cats');
+  if (!acessosData.length) {
+    wrap.innerHTML = '<div class="empty" style="padding:40px 0;font-size:13px;">Nenhum acesso cadastrado ainda.</div>';
+    return;
+  }
+  const byCat = {};
+  acessosData.forEach(a => {
+    const cat = a.categoria || 'Geral';
+    if (!byCat[cat]) byCat[cat] = [];
+    byCat[cat].push(a);
+  });
+  wrap.innerHTML = Object.entries(byCat).map(([cat, items]) => `
+    <div>
+      <div class="acessos-cat-title">${esc(cat)}</div>
+      <div class="acessos-grid">
+        ${items.map(a => acessoCardHtml(a)).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function acessoCardHtml(a) {
+  const senhaVis = senhasVisiveis.has(a.id);
+  const senhaVal = senhaVis ? esc(a.senha) : '••••••••';
+  const senhaClass = senhaVis ? '' : 'senha-hidden';
+  const urlHtml = a.url ? `<a class="acesso-url" href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.url)}</a>` : '';
+  const notasHtml = a.notas ? `<div class="acesso-notas">${esc(a.notas)}</div>` : '';
+  return `
+  <div class="acesso-card" id="ac-${a.id}">
+    <div class="acesso-card-top">
+      <div>
+        <div class="acesso-nome">${esc(a.nome)}</div>
+        ${urlHtml}
+      </div>
+      <button class="acesso-card-del" onclick="deleteAcesso('${a.id}')" title="Remover">✕</button>
+    </div>
+    <div class="acesso-fields">
+      ${a.login ? `
+      <div class="acesso-field">
+        <span class="acesso-field-label">Login</span>
+        <span class="acesso-field-value">${esc(a.login)}</span>
+        <button class="acesso-copy" onclick="copyText('${esc(a.login)}')" title="Copiar">⧉</button>
+      </div>` : ''}
+      ${a.senha ? `
+      <div class="acesso-field">
+        <span class="acesso-field-label">Senha</span>
+        <span class="acesso-field-value ${senhaClass}" id="sv-${a.id}">${senhaVal}</span>
+        <button class="acesso-toggle" onclick="toggleSenha('${a.id}','${esc(a.senha)}')" title="Mostrar/ocultar">${senhaVis ? '🙈' : '👁'}</button>
+        <button class="acesso-copy" onclick="copyText('${esc(a.senha)}')" title="Copiar">⧉</button>
+      </div>` : ''}
+    </div>
+    ${notasHtml}
+  </div>`;
+}
+
+function toggleSenha(id, senha) {
+  if (senhasVisiveis.has(id)) senhasVisiveis.delete(id);
+  else senhasVisiveis.add(id);
+  renderAcessos();
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => showToast('Copiado ✓'));
+}
+
+async function deleteAcesso(id) {
+  acessosData = acessosData.filter(a => a.id !== id);
+  renderAcessos();
+  await sb.from('acessos').delete().eq('id', id);
+}
+
+function openAcessoModal() {
+  document.getElementById('acesso-modal').classList.add('open');
+  setTimeout(() => document.getElementById('am-nome').focus(), 60);
+}
+function closeAcessoModal() {
+  document.getElementById('acesso-modal').classList.remove('open');
+  ['am-nome','am-cat','am-url','am-login','am-senha','am-notas'].forEach(id => document.getElementById(id).value = '');
+}
+
+async function saveAcesso() {
+  const nome     = document.getElementById('am-nome').value.trim();
+  const categoria= document.getElementById('am-cat').value.trim() || 'Geral';
+  const url      = document.getElementById('am-url').value.trim();
+  const login    = document.getElementById('am-login').value.trim();
+  const senha    = document.getElementById('am-senha').value.trim();
+  const notas    = document.getElementById('am-notas').value.trim();
+  if (!nome) { showToast('Preencha o nome do acesso'); return; }
+  const { data, error } = await sb.from('acessos').insert({ nome, categoria, url, login, senha, notas }).select().single();
+  if (error) { showToast('Erro ao salvar acesso'); return; }
+  acessosData.push(data);
+  acessosData.sort((a,b) => a.categoria.localeCompare(b.categoria) || a.nome.localeCompare(b.nome));
+  closeAcessoModal();
+  renderAcessos();
+  showToast('Acesso salvo ✓');
+}
+
+// ── coleta de dados ──
+let coletaData = [];
+let coletaLoaded = false;
+
+async function loadColeta() {
+  const { data, error } = await sb.from('data_collections').select('*').order('date', { ascending: false });
+  if (error) { showToast('Erro ao carregar coletas'); return; }
+  coletaData = data || [];
+  renderColeta();
+  coletaLoaded = true;
+}
+
+function renderColeta() {
+  const list = document.getElementById('coleta-list');
+  if (!coletaData.length) {
+    list.innerHTML = '<div class="empty" style="padding:40px 0;font-size:13px;">Nenhuma coleta registrada ainda.</div>';
+    return;
+  }
+  list.innerHTML = coletaData.map(c => {
+    const pts = (c.key_points || []).map(p => `
+      <div class="coleta-point">
+        <div class="coleta-point-cat">${esc(p.category)}</div>
+        <div class="coleta-point-detail">${esc(p.detail)}</div>
+      </div>`).join('');
+    const steps = (c.next_steps || []).map(s => `
+      <div class="coleta-step">
+        <span class="coleta-step-owner">${esc(s.owner)}</span>
+        <span class="coleta-step-action">${esc(s.action)}</span>
+      </div>`).join('');
+    const dateStr = c.date ? new Date(c.date + 'T00:00:00').toLocaleDateString('pt-BR') : '';
+    return `
+    <div class="coleta-card" id="cc-${c.id}">
+      <div class="coleta-card-header" onclick="toggleColeta('${c.id}')">
+        <div class="coleta-card-left">
+          <span class="coleta-project-badge">${esc(c.project)}</span>
+          <span class="coleta-source-type">${esc(c.source_type)}</span>
+          <div>
+            <div class="coleta-title">${esc(c.source_name)}</div>
+            <div class="coleta-subtitle">${esc(c.source_role)}</div>
+          </div>
+        </div>
+        <div class="coleta-meta">
+          <span class="coleta-date">${dateStr}</span>
+          <button class="coleta-card-del" onclick="event.stopPropagation();deleteColeta('${c.id}')" title="Remover">✕</button>
+          <span class="coleta-chevron">▶</span>
+        </div>
+      </div>
+      <div class="coleta-card-body">
+        <div class="coleta-section">
+          <div class="coleta-section-title">Resumo</div>
+          <div class="coleta-summary">${esc(c.summary)}</div>
+        </div>
+        ${pts ? `<div class="coleta-section"><div class="coleta-section-title">Pontos-chave</div><div class="coleta-points">${pts}</div></div>` : ''}
+        ${steps ? `<div class="coleta-section"><div class="coleta-section-title">Próximos passos</div><div class="coleta-steps">${steps}</div></div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleColeta(id) {
+  document.getElementById('cc-' + id).classList.toggle('open');
+}
+
+async function deleteColeta(id) {
+  coletaData = coletaData.filter(c => c.id !== id);
+  renderColeta();
+  await sb.from('data_collections').delete().eq('id', id);
+}
+
+function openColetaModal() {
+  document.getElementById('cm-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('coleta-modal').classList.add('open');
+  setTimeout(() => document.getElementById('cm-project').focus(), 60);
+}
+function closeColetaModal() {
+  document.getElementById('coleta-modal').classList.remove('open');
+  ['cm-project','cm-name','cm-role','cm-summary'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cm-points').innerHTML = '<div class="point-row"><input type="text" placeholder="Categoria"/><input type="text" placeholder="Detalhe"/><button class="btn-del-row" onclick="delRow(this)">✕</button></div>';
+  document.getElementById('cm-steps').innerHTML = '<div class="step-row"><input type="text" placeholder="Responsável"/><input type="text" placeholder="Ação"/><button class="btn-del-row" onclick="delRow(this)">✕</button></div>';
+}
+
+function addPointRow() {
+  const div = document.createElement('div');
+  div.className = 'point-row';
+  div.innerHTML = '<input type="text" placeholder="Categoria"/><input type="text" placeholder="Detalhe"/><button class="btn-del-row" onclick="delRow(this)">✕</button>';
+  document.getElementById('cm-points').appendChild(div);
+}
+function addStepRow() {
+  const div = document.createElement('div');
+  div.className = 'step-row';
+  div.innerHTML = '<input type="text" placeholder="Responsável"/><input type="text" placeholder="Ação"/><button class="btn-del-row" onclick="delRow(this)">✕</button>';
+  document.getElementById('cm-steps').appendChild(div);
+}
+function delRow(btn) { btn.closest('.point-row, .step-row').remove(); }
+
+async function saveColeta() {
+  const project  = document.getElementById('cm-project').value.trim();
+  const source_type = document.getElementById('cm-type').value;
+  const source_name = document.getElementById('cm-name').value.trim();
+  const source_role = document.getElementById('cm-role').value.trim();
+  const date     = document.getElementById('cm-date').value || null;
+  const summary  = document.getElementById('cm-summary').value.trim();
+  if (!project || !source_name) { showToast('Preencha projeto e nome da fonte'); return; }
+
+  const key_points = [...document.querySelectorAll('#cm-points .point-row')].map(r => {
+    const inputs = r.querySelectorAll('input');
+    return { category: inputs[0].value.trim(), detail: inputs[1].value.trim() };
+  }).filter(p => p.category);
+
+  const next_steps = [...document.querySelectorAll('#cm-steps .step-row')].map(r => {
+    const inputs = r.querySelectorAll('input');
+    return { owner: inputs[0].value.trim(), action: inputs[1].value.trim() };
+  }).filter(s => s.action);
+
+  const { data, error } = await sb.from('data_collections')
+    .insert({ project, source_type, source_name, source_role, date, summary, key_points, next_steps })
+    .select().single();
+  if (error) { showToast('Erro ao salvar coleta'); return; }
+  coletaData.unshift(data);
+  closeColetaModal();
+  renderColeta();
+  showToast('Coleta salva ✓');
+}
+
+// ── tab switching ──
+function switchTab(tab, el){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('page-'+tab).classList.add('active');
+  if(tab==='kanban'){
+    document.querySelector('.btn-new').style.display='flex';
+  } else {
+    document.querySelector('.btn-new').style.display='none';
+    if(tab==='agenda') renderCalendar();
+    if(tab==='coleta' && !coletaLoaded) loadColeta();
+    else if(tab==='coleta') renderColeta();
+    if(tab==='acessos' && !acessosLoaded) loadAcessos();
+    else if(tab==='acessos') renderAcessos();
+  }
+}
+
+// ── calendar ──
+const CAL_DAYS=[{id:'seg',label:'Segunda'},{id:'ter',label:'Terça'},{id:'qua',label:'Quarta'},{id:'qui',label:'Quinta'},{id:'sex',label:'Sexta'}];
+const CAL_HOURS=Array.from({length:11},(_,i)=>i+8); // 8..18
+const CAL_OWNERS=[
+  {id:'K', name:'Keila',        cls:'av-k'},
+  {id:'L', name:'Lívia',        cls:'av-l'},
+  {id:'ME',name:'Maria Eduarda',cls:'av-me'},
+];
+
+let calEvents={}; // key: owner_day_hour → {id, text}
+let calSaveTimers={};
+
+async function loadCalendar(){
+  const{data,error}=await sb.from('calendar_events').select('*');
+  if(error){showToast('Erro ao carregar agenda');return;}
+  calEvents={};
+  (data||[]).forEach(e=>{
+    calEvents[`${e.owner}_${e.day}_${e.hour}`]=e;
+  });
+}
+
+async function renderCalendar(){
+  if(!Object.keys(calEvents).length && document.getElementById('cal-wrap').querySelector('.loading')){
+    await loadCalendar();
+  }
+  const wrap=document.getElementById('cal-wrap');
+  wrap.innerHTML='<div class="cal-columns" id="cal-columns"></div>';
+  const cols=document.getElementById('cal-columns');
+  CAL_OWNERS.forEach(owner=>{
+    const section=document.createElement('div');
+    section.className='cal-section';
+    section.innerHTML=`
+      <div class="cal-section-header">
+        <div class="cal-av ${owner.cls}">${owner.id}</div>
+        <span class="cal-name">${owner.name}</span>
+      </div>
+      <div class="cal-grid-wrap">
+        <div class="cal-grid" id="grid-${owner.id}">
+          <div class="cal-head-cell"></div>
+          ${CAL_DAYS.map(d=>`<div class="cal-head-cell">${d.label.slice(0,3)}</div>`).join('')}
+          ${CAL_HOURS.map(h=>`
+            <div class="cal-hour-label">${h}h</div>
+            ${CAL_DAYS.map(d=>{
+              const key=`${owner.id}_${d.id}_${h}`;
+              const ev=calEvents[key];
+              const txt=ev?ev.text:'';
+              const hasCls=txt?'has-content':'';
+              return`<div class="cal-cell ${hasCls}" data-owner="${owner.id}" data-day="${d.id}" data-hour="${h}">
+                <textarea class="cal-input" placeholder="…" data-key="${key}">${esc(txt)}</textarea>
+              </div>`;
+            }).join('')}
+          `).join('')}
+        </div>
+      </div>`;
+    cols.appendChild(section);
+  });
+
+  // attach save listeners
+  wrap.querySelectorAll('.cal-input').forEach(ta=>{
+    ta.addEventListener('input', ()=>{
+      const key=ta.dataset.key;
+      const cell=ta.closest('.cal-cell');
+      if(ta.value.trim()) cell.classList.add('has-content');
+      else cell.classList.remove('has-content');
+      clearTimeout(calSaveTimers[key]);
+      calSaveTimers[key]=setTimeout(()=>saveCalCell(ta),800);
+    });
+  });
+}
+
+async function saveCalCell(ta){
+  const[owner,day,hour]=ta.dataset.key.split('_');
+  const text=ta.value.trim();
+  const existing=calEvents[ta.dataset.key];
+
+  if(!text){
+    if(existing){
+      delete calEvents[ta.dataset.key];
+      await sb.from('calendar_events').delete().eq('id',existing.id);
+    }
+    return;
+  }
+  if(existing){
+    calEvents[ta.dataset.key]={...existing,text};
+    await sb.from('calendar_events').update({text,updated_at:new Date().toISOString()}).eq('id',existing.id);
+  } else {
+    const{data,error}=await sb.from('calendar_events').insert({owner,day,hour:parseInt(hour),text}).select().single();
+    if(!error) calEvents[ta.dataset.key]=data;
+  }
+}
+
+// preload calendar data on page load
+loadCalendar();
+
+sb.channel('kanban').on('postgres_changes',{event:'*',schema:'public',table:'kanban_cards'},loadAll).subscribe();
+sb.channel('kanban-tags').on('postgres_changes',{event:'*',schema:'public',table:'kanban_tags'},loadAll).subscribe();
+</script>
+</body>
+</html>
